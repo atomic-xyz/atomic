@@ -1,0 +1,13 @@
+node_modules
+.next
+contracts/out
+contracts/cache
+contracts/lib
+contracts/broadcast
+.git
+.env
+.env.*
+contracts/.env
+**/.env
+**/.env.*
+media/

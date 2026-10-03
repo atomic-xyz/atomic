@@ -1,0 +1,19 @@
+{
+ "chainId": 4663,
+ "router": "0x82eec2769274eEc9F0BB9063F5B8a9908F3e389b",
+ "txHash": "0xde6a612203378a77c947d125743dc7971ff026561a48c4171bc285eeb8e2862e",
+ "deployedAt": "2026-10-03",
+ "version": "1.2 (holder fee waiver)",
+ "owner": "0x4fc22D5bbC37fBcC453C1FA099406e324B485C9f",
+ "previous": [
+  {
+   "router": "0xc7056fe38081b9359997fbcbf94591e2cf7e34d9",
+   "note": "v1.1 (post-audit), superseded by v1.2; holds no funds",
+   "txHash": "0x65448b509c010e335c6a74fd0c418355d728b08529fd43751ed281cf83fe6283"
+  },
+  {
+   "router": "0x7d0e0827a8bbc5a2cd78e5b12226c65cb449a9ec",
+   "note": "v1.0, superseded after audit; holds no funds"
+  }
+ ]
+}

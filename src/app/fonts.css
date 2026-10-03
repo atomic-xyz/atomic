@@ -1,0 +1,27 @@
+/*
+  Type roles, mapped onto the families loaded in layout.tsx:
+  display (headings) Bricolage Grotesque, body Manrope, mono IBM Plex Mono.
+*/
+
+:root {
+  --font-display: var(--f-bricolage);
+  --font-body: var(--f-manrope);
+  --font-mono: var(--f-plex-mono);
+  --display-weight: 700;
+  --display-tracking: -0.035em;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  font-optical-sizing: auto;
+}
+
+/* The accent word inside headings: same face and weight as the heading, colour only, never italic */
+.font-display {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: var(--display-weight);
+  font-style: normal !important;
+  letter-spacing: inherit;
+}

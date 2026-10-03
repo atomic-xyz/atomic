@@ -1,0 +1,72 @@
+[
+ {
+  "id": "0x9b4b47cdf7e295341c6c6cdfd3efb9805c4a5b3d580dba0c0c39d3a4232b297b",
+  "symbol": "SPCX",
+  "collateral": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+  "oracle": "0x872F9D8955B34e841227a92dE755cd63042Ab7A5",
+  "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+  "lltv": 0.625,
+  "supplyUSDG": 279955,
+  "borrowUSDG": 222
+ },
+ {
+  "id": "0xdeb4782d012d5fd3b24962538c2f6559049d70bda4dabd2e4212dacb96c28d45",
+  "symbol": "AAPL",
+  "collateral": "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9",
+  "oracle": "0xD625d488D552775D2867194C618B945E5dDfE097",
+  "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+  "lltv": 0.625,
+  "supplyUSDG": 238959,
+  "borrowUSDG": 28
+ },
+ {
+  "id": "0x7fa81b10e5d21b2e4c571f862442bc11aff2ed14f02335868d0ff933fd40d0ba",
+  "symbol": "GOOGL",
+  "collateral": "0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3",
+  "oracle": "0x12Ec3474D1e321e0aAB065278B97FBC7eDa5F424",
+  "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+  "lltv": 0.625,
+  "supplyUSDG": 158808,
+  "borrowUSDG": 1
+ },
+ {
+  "id": "0x8b16891f032a93b771347c9cb470a780e6699dd701553d3402aa3cdba6189c3e",
+  "symbol": "NVDA",
+  "collateral": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
+  "oracle": "0xED29D310cfa91778A5850538DA28ed42234Cb78c",
+  "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+  "lltv": 0.625,
+  "supplyUSDG": 99941,
+  "borrowUSDG": 902
+ },
+ {
+  "id": "0x50bc39b5722fb5634c436d74c6787f3c125b879e7b73cf9e9ecc01bbb57b8e55",
+  "symbol": "SPY",
+  "collateral": "0x117cc2133c37b721f49de2a7a74833232b3b4c0c",
+  "oracle": "0xe8dAb19184f72b5a5a9d51A6C50A1b04b0669ce7",
+  "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+  "lltv": 0.625,
+  "supplyUSDG": 11229,
+  "borrowUSDG": 4343
+ },
+ {
+  "id": "0x66306c087add8907752320b309934abcc354d21626de8115c79df49d9c214edc",
+  "symbol": "NVDA",
+  "collateral": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
+  "oracle": "0xC5b8A6C5fDF14f9744dB1C8595f49E42Ce23031a",
+  "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+  "lltv": 0.625,
+  "supplyUSDG": 6579,
+  "borrowUSDG": 417
+ },
+ {
+  "id": "0xb41b34c5989420ad080e79363a9cfe3e23bec7459fcd2d88029250da370288df",
+  "symbol": "TSLA",
+  "collateral": "0x322f0929c4625ed5bad873c95208d54e1c003b2d",
+  "oracle": "0xCa76875634e0b9759AA6610dC3092e92fcefE46E",
+  "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+  "lltv": 0.625,
+  "supplyUSDG": 6560,
+  "borrowUSDG": 2
+ }
+]

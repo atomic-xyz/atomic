@@ -1,0 +1,37 @@
+/*
+  Palette tokens. Every colour on the site resolves to one of these, including the rgb
+  triplets used inside glows, tints and canvas drawing. One palette only, matched to the
+  logo: black, white and silver. The action colour is white.
+*/
+
+:root {
+  --bg: #050505;
+  --bg-rgb: 5, 5, 5;
+  --bg-2: #0b0b0c;
+  --surface: #101012;
+  --surface-2: #17171a;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-2: rgba(255, 255, 255, 0.18);
+  --text: #f2f2f2;
+  --text-rgb: 242, 242, 242;
+  --muted: #9a9aa2;
+  --muted-2: #5e5e66;
+  --muted-rgb: 154, 154, 162;
+  --flash: #f2f2f2;
+  --flash-rgb: 242, 242, 242;
+  --flash-hover: #ffffff;
+  --flash-2: #a9a9b3;
+  --flash-2-rgb: 169, 169, 179;
+  --on-flash: #050505;
+  --volt: #c7c9d6;
+  --volt-rgb: 199, 201, 214;
+  --sun: #6f7080;
+  --sun-rgb: 111, 112, 128;
+  --shadow-rgb: 0, 0, 0;
+  --up: #6fd6a3;
+  --up-rgb: 111, 214, 163;
+  --down: #f07070;
+  --down-rgb: 240, 112, 112;
+  --warn: #e3b869;
+  color-scheme: dark;
+}

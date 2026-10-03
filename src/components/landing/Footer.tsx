@@ -40,6 +40,7 @@ export function Footer() {
               <li><Link href="/risks" className="hover:text-text">Risks</Link></li>
               <li><Link href="/app" className="hover:text-text">App</Link></li>
               <li><a href={X_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-text"><XIcon size={13} /> @useatomic_xyz</a></li>
+              <li><a href="https://github.com/atomic-xyz/atomic" target="_blank" rel="noreferrer" className="hover:text-text">GitHub, open source</a></li>
             </ul>
           </div>
           <div className="text-sm">

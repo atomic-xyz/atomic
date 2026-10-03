@@ -17,9 +17,11 @@ import { ArbPanel } from "./ArbPanel";
 import { PositionsPanel } from "./PositionsPanel";
 import { BorrowersPanel } from "./BorrowersPanel";
 import { HoldersPanel } from "./HoldersPanel";
+import { BorrowPanel } from "./BorrowPanel";
 
 const TABS = [
   { key: "leverage", label: "Perpetual", hint: "A leveraged stock position with no expiry" },
+  { key: "borrow", label: "Borrow", hint: "Unlock USDG from stock tokens you already hold" },
   { key: "arb", label: "Arbitrage", hint: "Buy low on one pool, sell high on another, no capital" },
   { key: "borrowers", label: "Borrowers", hint: "Everyone with a loan against a stock token right now" },
   { key: "holders", label: "Holders", hint: "Perks for wallets that hold the ATOMIC token" },
@@ -86,6 +88,7 @@ export function AppShell() {
               {tab === "arb" && <>Arbitrage between pools, <span className="font-display italic text-flash">live</span></>}
               {tab === "positions" && <>What you own <span className="font-display italic text-flash">and how it is doing</span></>}
               {tab === "borrowers" && <>Who is borrowing <span className="font-display italic text-flash">against stocks, live</span></>}
+              {tab === "borrow" && <>Borrow against your stocks, <span className="font-display italic text-flash">without selling them</span></>}
               {tab === "holders" && <>Hold ATOMIC, <span className="font-display italic text-flash">trade with no fee and see signals first</span></>}
             </h1>
           </div>
@@ -108,6 +111,7 @@ export function AppShell() {
             {tab === "positions" && <PositionsPanel />}
             {tab === "borrowers" && <BorrowersPanel />}
             {tab === "holders" && <HoldersPanel />}
+            {tab === "borrow" && <BorrowPanel />}
           </motion.div>
         </AnimatePresence>
       </main>

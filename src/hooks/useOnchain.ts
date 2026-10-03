@@ -106,3 +106,38 @@ export function useHolderStatus(): HolderStatus & { isLoading: boolean } {
   const balance = (bal.data as bigint | undefined) ?? 0n;
   return { token: enabled ? token : null, min, balance, enabled, isHolder: enabled && !!address && balance >= min, feeBps, isLoading: cfg.isLoading };
 }
+
+export interface StockHolding {
+  market: Market;
+  /** wallet balance of the collateral token, 18 decimals */
+  balance: bigint;
+  /** how much of it Morpho may already pull */
+  allowance: bigint;
+}
+
+/** What the connected wallet holds of each stock that has a lending market, and its Morpho allowance. */
+export function useStockHoldings() {
+  const { address } = useAccount();
+  const contracts = address
+    ? PRIMARY_MARKETS.flatMap((m) => [
+        { address: m.collateral as Address, abi: erc20Abi, functionName: "balanceOf" as const, args: [address] as const },
+        { address: m.collateral as Address, abi: erc20Abi, functionName: "allowance" as const, args: [address, MORPHO] as const },
+      ])
+    : [];
+  const q = useReadContracts({ contracts, query: { enabled: !!address, refetchInterval: 8_000 } });
+  const holdings: StockHolding[] = PRIMARY_MARKETS.map((m, i) => ({
+    market: m,
+    balance: (q.data?.[i * 2]?.result as bigint | undefined) ?? 0n,
+    allowance: (q.data?.[i * 2 + 1]?.result as bigint | undefined) ?? 0n,
+  }));
+  return { ...q, holdings };
+}
+
+/** USDG the connected wallet has approved for Morpho itself (repaying a loan directly). */
+export function useUsdgAllowanceForMorpho() {
+  const { address } = useAccount();
+  return useReadContract({
+    address: USDG, abi: erc20Abi, functionName: "allowance", args: address ? [address, MORPHO] : undefined,
+    query: { enabled: !!address, refetchInterval: 8_000 },
+  });
+}

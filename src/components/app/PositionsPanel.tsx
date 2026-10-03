@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { Address } from "viem";
+import { erc20Abi, type Address } from "viem";
 import { useAccount, useWriteContract } from "wagmi";
 import { Ticker } from "@/components/ui/primitives";
 import { useQuote, useSnapshot } from "@/hooks/useSnapshot";
-import { useHolderStatus, usePositions, useRouterAuthorized, useUsdgBalance, type OnchainPosition } from "@/hooks/useOnchain";
+import { useHolderStatus, usePositions, useRouterAuthorized, useUsdgAllowanceForMorpho, useUsdgBalance, type OnchainPosition } from "@/hooks/useOnchain";
 import { ADDR } from "@/lib/addresses";
 import { marketParams, morphoAbi, ROUTER_ABI, ROUTER_ADDRESS, routeToPath, withSlippage } from "@/lib/router";
 import { fmtNum, fmtPct, fmtUsd } from "@/lib/math";
@@ -108,6 +108,32 @@ function PositionCard({ p, address, onChanged }: { p: OnchainPosition; address?:
     },
   ];
 
+  // Repay with the wallet's own USDG and take the stock back, without selling anything.
+  const usdgBal = useUsdgBalance();
+  const morphoAllowance = useUsdgAllowanceForMorpho();
+  const repayRaw = (p.debt * 1001n) / 1000n + 1n; // small headroom for interest accruing before the transaction lands
+  const walletUsdg = usdgBal.data !== undefined ? Number(usdgBal.data) / 1e6 : null;
+  const canRepay = p.debt === 0n || (usdgBal.data !== undefined && (usdgBal.data as bigint) >= repayRaw);
+  const repaySteps: FlowStep[] = address
+    ? [
+        {
+          key: "approve-usdg", label: "Approve USDG", detail: `${fmtNum(debt, 2)} USDG`,
+          needed: p.debt > 0n && ((morphoAllowance.data as bigint | undefined) ?? 0n) < repayRaw,
+          run: () => writeContractAsync({ address: ADDR.USDG as Address, abi: erc20Abi, functionName: "approve", args: [ADDR.MORPHO as Address, repayRaw] }),
+        },
+        {
+          key: "repay", label: "Repay the loan", detail: `${fmtUsd(debt)}`,
+          needed: p.debt > 0n,
+          run: () => writeContractAsync({ address: ADDR.MORPHO as Address, abi: morphoAbi, functionName: "repay", args: [marketParams(p.market), 0n, p.borrowShares, address as Address, "0x"] }),
+        },
+        {
+          key: "withdraw", label: `Take back ${fmtNum(coll, 4)} ${p.market.symbol}`, detail: "to your wallet",
+          needed: p.collateral > 0n,
+          run: () => writeContractAsync({ address: ADDR.MORPHO as Address, abi: morphoAbi, functionName: "withdrawCollateral", args: [marketParams(p.market), p.collateral, address as Address, address as Address] }),
+        },
+      ]
+    : [];
+
   const techSteps = [
     { label: "Flash borrow", detail: `${fmtNum(debt, 2)} USDG`, venue: "Morpho" },
     { label: "Repay and withdraw", detail: `${fmtNum(coll, 4)} ${p.market.symbol} released`, venue: "Morpho" },
@@ -171,6 +197,14 @@ function PositionCard({ p, address, onChanged }: { p: OnchainPosition; address?:
           </div>
           <div className="mt-3">
             <ExecuteFlow steps={steps} label={`Close and receive ${fmtUsd(Math.max(remainder, 0))}`} ready={!!route && remainder > 0} blocker={route && remainder <= 0 ? "Selling would not cover the loan" : undefined} onDone={() => { if (address) clearEntry(address, p.market.id); onChanged(); }} />
+          </div>
+          <div className="mt-3 rounded-2xl border border-line bg-bg/40 p-4">
+            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-2">Or keep the stock</div>
+            <div className="mt-1.5 text-sm text-text">{debt > 0 ? <>Repay {fmtUsd(debt)} from your wallet and take back {fmtNum(coll, 4)} {p.market.symbol}.</> : <>Take back {fmtNum(coll, 4)} {p.market.symbol}, there is no loan on it.</>}</div>
+            <div className="mt-0.5 text-[11px] text-muted">{debt > 0 ? `Nothing is sold. Your wallet has ${walletUsdg !== null ? fmtUsd(walletUsdg) : "-"} USDG.` : "Nothing is sold."}</div>
+            <div className="mt-3">
+              <ExecuteFlow compact steps={repaySteps} label={debt > 0 ? `Repay and take back ${p.market.symbol}` : `Take back ${p.market.symbol}`} ready={canRepay} blocker={!canRepay ? `You need ${fmtUsd(debt)} USDG to repay` : undefined} onDone={() => { if (address) clearEntry(address, p.market.id); onChanged(); }} />
+            </div>
           </div>
           <button onClick={() => setShowTech((v) => !v)} className="mt-3 flex w-full items-center justify-between font-mono text-[11px] uppercase tracking-[0.16em] text-muted-2">
             Under the hood <span className={`transition-transform ${showTech ? "rotate-45" : ""}`}>+</span>

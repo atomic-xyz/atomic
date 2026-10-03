@@ -80,10 +80,11 @@ A Next.js application at [useatomic.xyz/app](https://useatomic.xyz/app). Every n
 | Tab | What it is for |
 | --- | --- |
 | **Perpetual** | Three questions (which stock, how much, how bold), a one-sentence summary and one button. A details section holds the what-if table, the equity chart, slippage and the step trace |
+| **Borrow** | Put up stock tokens you already hold and borrow USDG against them, without selling. Direct Morpho calls from your wallet, no ATOMIC fee |
 | **Arbitrage** | Every stock that trades in two or more pools, the gap between the cheapest and dearest pool, the fees, and a button when the gap pays for itself |
 | **Borrowers** | Every open loan on the stock markets: what each wallet holds and owes, live profit since entry, leverage and distance to liquidation |
 | **Holders** | Status of the connected wallet, the full gap list, a liquidation watch and browser alerts, for wallets that hold ATOMIC |
-| **My positions** | The connected wallet's positions with live profit and a one-transaction close |
+| **My positions** | The connected wallet's positions with live profit, a one-transaction close, and repay-and-take-back for keeping the stock |
 | **Rotate** | Move a position into another stock without touching the loan |
 
 The first leveraged action from a wallet needs three signatures (approve USDG, authorize the router on Morpho, open). After that it is one.

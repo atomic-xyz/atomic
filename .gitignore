@@ -50,3 +50,7 @@ next-env.d.ts
 /media/
 /contracts/broadcast/
 /contracts/lib/
+
+# written and re-added by `next dev`, not part of the project
+/AGENTS.md
+/CLAUDE.md

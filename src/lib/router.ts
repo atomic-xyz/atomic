@@ -1,11 +1,14 @@
 import { encodePacked, parseAbi, type Abi, type Address, type Hex } from "viem";
 import routerAbiJson from "@/lib/abis/AtomicRouter.json";
-import { ADDR, ATOMIC_ROUTER } from "@/lib/addresses";
+import { ADDR, ATOMIC_ARB, ATOMIC_ROUTER } from "@/lib/addresses";
+import arbAbiJson from "@/lib/abis/AtomicArb.json";
 import type { Market } from "@/lib/data";
 import type { QuoteRoute } from "@/app/api/quote/route";
 
 export const ROUTER_ABI = routerAbiJson as Abi;
 export const ROUTER_ADDRESS = (ATOMIC_ROUTER || undefined) as Address | undefined;
+export const ARB_ABI = arbAbiJson as Abi;
+export const ARB_ADDRESS = ATOMIC_ARB as Address;
 
 export const morphoAbi = parseAbi([
   "function setAuthorization(address authorized, bool newIsAuthorized)",

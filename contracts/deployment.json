@@ -15,5 +15,11 @@
    "router": "0x7d0e0827a8bbc5a2cd78e5b12226c65cb449a9ec",
    "note": "v1.0, superseded after audit; holds no funds"
   }
- ]
+ ],
+ "arb": {
+  "address": "0xfc36D801680Ca99f4ebE020Ab9967f3249e87A48",
+  "txHash": "0x3d01cf434d9c6034b18153266ae9172ef17a24aa0254a116fa48121001ef39d9",
+  "deployedAt": "2026-10-05",
+  "note": "AtomicArb: multi-DEX arbitrage through direct pool swaps; no owner; fee policy read from the router"
+ }
 }

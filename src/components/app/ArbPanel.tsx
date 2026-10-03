@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Address } from "viem";
-import { useWriteContract } from "wagmi";
+import { useQuery } from "@tanstack/react-query";
+import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { Ticker } from "@/components/ui/primitives";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { useNow } from "@/hooks/useNow";
@@ -13,18 +14,34 @@ import { fmtNum, fmtPct, fmtUsd } from "@/lib/math";
 import type { VenuePrice } from "@/lib/types";
 import { Panel, StepList } from "./shared";
 import { ExecuteFlow } from "./ExecuteFlow";
-import { ROUTER_ABI, ROUTER_ADDRESS, v3Path } from "@/lib/router";
+import { ARB_ABI, ARB_ADDRESS } from "@/lib/router";
 
-import { buildOpps, type Opp } from "@/lib/arb";
+import { ARB_DEXES, arbHops, buildOpps, type Opp } from "@/lib/arb";
 
 const venueName = (v: VenuePrice) => `${dexLabel(v.dex)}${v.fee ? ` ${(v.fee / 10000).toFixed(2)}%` : ""} (${v.quote} pool)`;
 
-function venuePath(stock: Address, quote: "USDG" | "WETH", fee: number, direction: "buy" | "sell") {
-  const usdg = ADDR.USDG as Address;
-  const weth = ADDR.WETH as Address;
-  if (quote === "USDG") return direction === "buy" ? v3Path([usdg, stock], [fee]) : v3Path([stock, usdg], [fee]);
-  return direction === "buy" ? v3Path([usdg, weth, stock], [100, fee]) : v3Path([stock, weth, usdg], [fee, 100]);
+/**
+ * Reads how far a simulated trade fell short from the contract's InsufficientOutput(got, need) revert.
+ * RPC providers wrap revert data differently, so this looks for the raw selector anywhere in the error chain.
+ */
+function shortfallOf(err: unknown): number | null {
+  const seen: string[] = [];
+  for (let e = err as { cause?: unknown; data?: unknown; message?: string; details?: string } | null, i = 0; e && i < 8; e = e.cause as typeof e, i++) {
+    if (typeof e.data === "string") seen.push(e.data);
+    else if (e.data && typeof e.data === "object") {
+      const d = e.data as { errorName?: string; args?: readonly unknown[]; data?: unknown };
+      if (d.errorName === "InsufficientOutput" && d.args) return Number((d.args[1] as bigint) - (d.args[0] as bigint)) / 1e6;
+      if (typeof d.data === "string") seen.push(d.data);
+    }
+    if (e.message) seen.push(e.message);
+    if (e.details) seen.push(e.details);
+  }
+  const m = seen.join(" ").match(/0x2c19b8b8([0-9a-fA-F]{64})([0-9a-fA-F]{64})/);
+  return m ? Number(BigInt("0x" + m[2]) - BigInt("0x" + m[1])) / 1e6 : null;
 }
+
+// A wallet with no ATOMIC, used to price trades when nobody is connected.
+const SIM_ACCOUNT = "0x1111111111111111111111111111111111111111" as Address;
 
 export function ArbPanel() {
   const { data, dataUpdatedAt } = useSnapshot();
@@ -61,9 +78,9 @@ export function ArbPanel() {
 
       <div className="grid gap-4 md:grid-cols-3">
         {[
-          { l: "Gaps you can take right now", v: data ? String(ready.length) : "-", s: "after both pool fees" },
+          { l: "Gaps that pay on paper", v: data ? String(ready.length) : "-", s: "each one is simulated below" },
           { l: "Stocks with two or more pools", v: data ? String(pairs.length) : "-", s: "compared every 10 seconds" },
-          { l: "Pools watched", v: data ? String(data.venues.length) : "-", s: "Uniswap v3, v4 and forks" },
+          { l: "Pools watched", v: data ? String(data.venues.length) : "-", s: "Uniswap v3, Ramses, giga, v4" },
         ].map((c) => (
           <div key={c.l} className="card p-4">
             <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-2">{c.l}</div>
@@ -78,13 +95,14 @@ export function ArbPanel() {
           <div className={`mb-4 rounded-2xl border px-5 py-4 ${ready.length > 0 ? "border-up/40 bg-up/10" : "border-line bg-surface"}`}>
             {ready.length > 0 ? (
               <div className="text-[15px] text-text">
-                <b className="text-up">{ready.length} {ready.length === 1 ? "gap is" : "gaps are"} takeable right now.</b> Look for the card with the <b>Take it</b> button: {ready.map((o) => o.symbol).join(", ")}.
+                <b className="text-up">{ready.length} {ready.length === 1 ? "gap pays" : "gaps pay"} on paper: {ready.map((o) => o.symbol).join(", ")}.</b>{" "}
+                <span className="text-muted">Each card runs the real trade as a simulation first. A <b className="text-text">Take it</b> button appears only when the simulation makes money.</span>
               </div>
             ) : (
               <div className="text-[15px] leading-relaxed text-text">
                 <b>Nothing to take right now, so no card shows a Take it button.</b>{" "}
                 <span className="text-muted">
-                  The button appears on a card the moment its gap is bigger than the pool fees and both pools are Uniswap v3.
+                  The button appears on a card when its gap is bigger than the pool fees and a simulation of the real trade makes money.
                   {blocked.length > 0 && <> {blocked.length === 1 ? "One gap pays" : `${blocked.length} gaps pay`} today ({blocked.map((o) => o.symbol).join(", ")}) but {blocked.length === 1 ? "sits" : "sit"} on a pool the router cannot trade yet.</>}
                   {" "}Gaps come and go within seconds, so check back or keep this tab open.
                 </span>
@@ -139,6 +157,29 @@ function PairCard({ o, sz }: { o: Opp; sz: number }) {
   const tone = o.net > 0.001 ? "up" : o.net > 0 ? "warn" : "muted";
   const toneText = { up: "text-up", warn: "text-warn", muted: "text-muted" }[tone];
   const sizeRaw = BigInt(Math.round(sz * 1e6));
+  const { address } = useAccount();
+  const candidate = o.executable && o.net > 0 && !!stockAddr && sz > 0;
+  const buyHops = stockAddr ? arbHops(o.buy, stockAddr, "buy") : [];
+  const sellHops = stockAddr ? arbHops(o.sell, stockAddr, "sell") : [];
+
+  // Run the exact trade as an eth_call. Quoted gaps ignore depth: a pool can show a great price and hold
+  // almost nothing, so only the simulated result decides whether there is anything to take.
+  const client = usePublicClient();
+  const sim = useQuery({
+    queryKey: ["arb-sim", o.symbol, o.buy.pool, o.sell.pool, sizeRaw.toString(), address ?? ""],
+    enabled: candidate && !!client,
+    refetchInterval: 10_000,
+    retry: false,
+    queryFn: async () => {
+      const r = await client!.simulateContract({
+        address: ARB_ADDRESS, abi: ARB_ABI, functionName: "arb", args: [sizeRaw, buyHops, sellHops, 0n], account: address ?? SIM_ACCOUNT,
+      });
+      return r.result as bigint;
+    },
+  });
+  const simProfit = sim.data !== undefined ? Number(sim.data) / 1e6 : null;
+  const simShortfall = shortfallOf(sim.error);
+  const takeable = candidate && simProfit !== null && simProfit > 0;
 
   const steps = [
     { label: "Borrow", detail: `${fmtNum(sz, 0)} USDG for one block`, venue: "Morpho" },
@@ -149,7 +190,7 @@ function PairCard({ o, sz }: { o: Opp; sz: number }) {
   ];
 
   return (
-    <div className={`card flex flex-col p-5 ${o.net > 0 && o.executable ? "shadow-[0_0_0_1px_rgba(var(--up-rgb),0.35)]" : ""}`}>
+    <div className={`card flex flex-col p-5 ${takeable ? "shadow-[0_0_0_1px_rgba(var(--up-rgb),0.35)]" : ""}`}>
       <div className="flex items-center gap-3">
         <Ticker symbol={o.symbol} size="lg" />
         <div className="flex-1">
@@ -177,27 +218,32 @@ function PairCard({ o, sz }: { o: Opp; sz: number }) {
         <div className="rounded-xl border border-line bg-bg/40 p-2.5"><div className="text-muted-2">pool fees</div><div className="mt-0.5 text-text">{fmtPct(o.fees)}</div></div>
       </div>
 
-      {o.executable && o.net > 0 ? (
+      {takeable ? (
         <div className="mt-4">
-        <ExecuteFlow
-          steps={[{
-            key: "arb", label: `Take the ${o.symbol} gap`, detail: `${fmtNum(sz, 0)} USDG borrowed`, needed: true,
-            run: () => writeContractAsync({
-              address: ROUTER_ADDRESS!, abi: ROUTER_ABI, functionName: "arb",
-              args: [sizeRaw, venuePath(stockAddr!, o.buy.quote, o.buy.fee!, "buy"), venuePath(stockAddr!, o.sell.quote, o.sell.fee!, "sell"), sizeRaw / 2000n],
-            }),
-          }]}
-          label={`Take it: about ${fmtUsd(profit)}`}
-          compact
-          ready={o.net > 0 && sz > 0 && o.executable && !!stockAddr}
-          
-        />
-      </div>
+          <ExecuteFlow
+            steps={[{
+              key: "arb", label: `Take the ${o.symbol} gap`, detail: `${fmtNum(sz, 0)} USDG borrowed`, needed: true,
+              // ask for at least half of the simulated profit, so a small move in between does not cancel it
+              run: () => writeContractAsync({ address: ARB_ADDRESS, abi: ARB_ABI, functionName: "arb", args: [sizeRaw, buyHops, sellHops, BigInt(Math.floor((simProfit ?? 0) * 1e6)) / 2n] }),
+            }]}
+            label={`Take it: ${fmtUsd(simProfit ?? 0)} simulated`}
+            compact
+            ready={takeable}
+          />
+        </div>
       ) : (
         <p className="mt-4 rounded-xl border border-line px-3 py-2.5 text-xs leading-relaxed text-muted">
-          {!o.executable
-            ? <>Watch only. One side of this gap is on {[o.buy, o.sell].filter((v) => v.dex !== "uniswap-v3-robinhood").map((v) => dexLabel(v.dex)).filter((v, k, a) => a.indexOf(v) === k).join(" and ")}, and the router trades Uniswap v3 pools only for now.</>
-            : <>Nothing to take yet. The gap is smaller than the two pool fees combined.</>}
+          {!o.executable ? (
+            <>Watch only. One side of this gap is on {[o.buy, o.sell].filter((v) => !ARB_DEXES.has(v.dex)).map((v) => dexLabel(v.dex)).filter((v, k, a) => a.indexOf(v) === k).join(" and ")}, which ATOMIC cannot trade yet. It trades Uniswap v3, Ramses and giga pools.</>
+          ) : o.net <= 0 ? (
+            <>Nothing to take yet. The gap is smaller than the two pool fees combined.</>
+          ) : sim.isLoading ? (
+            <>Simulating the real trade at {fmtUsd(sz, 0)}.</>
+          ) : simShortfall !== null ? (
+            <>Simulated at {fmtUsd(sz, 0)}: the trade would come back <b className="text-down">{fmtUsd(simShortfall)} short</b>. The quoted gap does not survive a real trade, usually because one pool is too thin. Try a smaller size.</>
+          ) : (
+            <>The simulation did not go through, so there is nothing safe to take right now.</>
+          )}
         </p>
       )}
 
@@ -208,7 +254,7 @@ function PairCard({ o, sz }: { o: Opp; sz: number }) {
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <div className="mt-3">
-              <StepList steps={steps} accent={o.net > 0} />
+              <StepList steps={steps} accent={takeable} />
               <div className="mt-3 grid gap-1.5">
                 {o.venues.map((v) => (
                   <a key={v.pool} href={`${EXPLORER}/address/${v.dex === "uniswap-v4-robinhood" ? ADDR.UNI_V4_POOL_MANAGER : v.pool}`} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-xl border border-line px-3 py-1.5 font-mono text-[11px] transition-colors hover:border-line-2">
@@ -217,7 +263,7 @@ function PairCard({ o, sz }: { o: Opp; sz: number }) {
                   </a>
                 ))}
               </div>
-              <p className="mt-2 text-[11px] text-muted-2">Net ignores price impact and gas, so treat it as an upper bound. The router requires at least 0.05% profit or the transaction reverts.</p>
+              <p className="mt-2 text-[11px] text-muted-2">The percentage above ignores price impact. The simulation does not: it runs the same swaps the transaction would. If the result on-chain falls below half of the simulated profit, the transaction reverts.</p>
             </div>
           </motion.div>
         )}

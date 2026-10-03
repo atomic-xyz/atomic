@@ -1,0 +1,260 @@
+[
+ {
+  "type": "constructor",
+  "inputs": [
+   {
+    "name": "morpho",
+    "type": "address",
+    "internalType": "address"
+   },
+   {
+    "name": "usdg",
+    "type": "address",
+    "internalType": "address"
+   },
+   {
+    "name": "fees",
+    "type": "address",
+    "internalType": "address"
+   }
+  ],
+  "stateMutability": "nonpayable"
+ },
+ {
+  "type": "function",
+  "name": "FEES",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "",
+    "type": "address",
+    "internalType": "contract IAtomicFees"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "MORPHO",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "",
+    "type": "address",
+    "internalType": "contract IMorpho"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "USDG",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "",
+    "type": "address",
+    "internalType": "contract IERC20"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "arb",
+  "inputs": [
+   {
+    "name": "size",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "buy",
+    "type": "tuple[]",
+    "internalType": "struct AtomicArb.Hop[]",
+    "components": [
+     {
+      "name": "pool",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "tokenIn",
+      "type": "address",
+      "internalType": "address"
+     }
+    ]
+   },
+   {
+    "name": "sell",
+    "type": "tuple[]",
+    "internalType": "struct AtomicArb.Hop[]",
+    "components": [
+     {
+      "name": "pool",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "tokenIn",
+      "type": "address",
+      "internalType": "address"
+     }
+    ]
+   },
+   {
+    "name": "minProfit",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "outputs": [
+   {
+    "name": "profit",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "nonpayable"
+ },
+ {
+  "type": "function",
+  "name": "onMorphoFlashLoan",
+  "inputs": [
+   {
+    "name": "assets",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "data",
+    "type": "bytes",
+    "internalType": "bytes"
+   }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+ },
+ {
+  "type": "function",
+  "name": "pancakeV3SwapCallback",
+  "inputs": [
+   {
+    "name": "amount0Delta",
+    "type": "int256",
+    "internalType": "int256"
+   },
+   {
+    "name": "amount1Delta",
+    "type": "int256",
+    "internalType": "int256"
+   },
+   {
+    "name": "",
+    "type": "bytes",
+    "internalType": "bytes"
+   }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+ },
+ {
+  "type": "function",
+  "name": "uniswapV3SwapCallback",
+  "inputs": [
+   {
+    "name": "amount0Delta",
+    "type": "int256",
+    "internalType": "int256"
+   },
+   {
+    "name": "amount1Delta",
+    "type": "int256",
+    "internalType": "int256"
+   },
+   {
+    "name": "",
+    "type": "bytes",
+    "internalType": "bytes"
+   }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+ },
+ {
+  "type": "event",
+  "name": "Arbed",
+  "inputs": [
+   {
+    "name": "user",
+    "type": "address",
+    "indexed": true,
+    "internalType": "address"
+   },
+   {
+    "name": "size",
+    "type": "uint256",
+    "indexed": false,
+    "internalType": "uint256"
+   },
+   {
+    "name": "profit",
+    "type": "uint256",
+    "indexed": false,
+    "internalType": "uint256"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "error",
+  "name": "BadCallback",
+  "inputs": []
+ },
+ {
+  "type": "error",
+  "name": "BadPath",
+  "inputs": []
+ },
+ {
+  "type": "error",
+  "name": "InsufficientOutput",
+  "inputs": [
+   {
+    "name": "got",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "need",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ]
+ },
+ {
+  "type": "error",
+  "name": "NoContext",
+  "inputs": []
+ },
+ {
+  "type": "error",
+  "name": "NotActivePool",
+  "inputs": []
+ },
+ {
+  "type": "error",
+  "name": "NotMorpho",
+  "inputs": []
+ },
+ {
+  "type": "error",
+  "name": "Reentrancy",
+  "inputs": []
+ },
+ {
+  "type": "error",
+  "name": "ZeroAmount",
+  "inputs": []
+ }
+]

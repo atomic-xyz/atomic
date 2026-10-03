@@ -73,6 +73,17 @@ The router ends every recipe with a zero balance (`test_A6_routerNeverHoldsFunds
 
 Owner and treasury: `0x4fc22D5bbC37fBcC453C1FA099406e324B485C9f`.
 
+## AtomicArb (added 2026-10-03)
+
+`AtomicArb` at `0xfc36D801680Ca99f4ebE020Ab9967f3249e87A48` was added after the review above and went through the same internal review, not a third-party audit. What was checked:
+
+- **Callback authentication.** `uniswapV3SwapCallback` and `pancakeV3SwapCallback` pay only the pool currently being swapped against, only while a trade is in progress, in the token that was sent into the swap, and never more than that amount. A hostile pool asking for more, or calling back twice, reverts (`test_poolCannotTakeMoreThanItWasSent`, `test_poolCannotCallBackTwice`).
+- **Path integrity.** Each hop must take the token the previous hop produced, the first hop must take USDG and the last must return USDG (`test_pathMustChain`).
+- **No custody and no privilege.** The contract has no owner and no stored balances. A caller can pass any pool address, including a malicious one, but the only funds at risk inside a call are that caller's own flash loan, and the transaction reverts unless the loan and fee are covered.
+- **Fee policy.** Fee and holder waiver are read from the router, so they cannot drift apart (`test_profitGoesToCaller_feeToTreasury`, `test_holderPaysNoFee`).
+
+Known limits: pools that use a different callback name (Algebra) and Uniswap v4 pools are not supported. Arbitrage transactions can be front-run; `minProfit` bounds the outcome and a losing attempt reverts.
+
 ## Residual risks (not code defects)
 
 - No independent audit yet.

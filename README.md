@@ -81,13 +81,31 @@ A Next.js application at [useatomic.xyz/app](https://useatomic.xyz/app). Every n
 | --- | --- |
 | **Perpetual** | Three questions (which stock, how much, how bold), a one-sentence summary and one button. A details section holds the what-if table, the equity chart, slippage and the step trace |
 | **Borrow** | Put up stock tokens you already hold and borrow USDG against them, without selling. Direct Morpho calls from your wallet, no ATOMIC fee |
-| **Arbitrage** | Every stock that trades in two or more pools, the gap between the cheapest and dearest pool, the fees, and a button when the gap pays for itself |
+| **Arbitrage** | Every stock that trades in two or more pools across Uniswap v3, Ramses and giga, the gap between the cheapest and dearest pool, and the fees. Each gap that pays on paper is simulated as the real trade, and the button appears only when the simulation makes money |
 | **Borrowers** | Every open loan on the stock markets: what each wallet holds and owes, live profit since entry, leverage and distance to liquidation |
 | **Holders** | Status of the connected wallet, the full gap list, a liquidation watch and browser alerts, for wallets that hold ATOMIC |
 | **My positions** | The connected wallet's positions with live profit, a one-transaction close, and repay-and-take-back for keeping the stock |
 | **Rotate** | Move a position into another stock without touching the loan |
 
 The first leveraged action from a wallet needs three signatures (approve USDG, authorize the router on Morpho, open). After that it is one.
+
+## The arbitrage contract
+
+[`contracts/src/AtomicArb.sol`](contracts/src/AtomicArb.sol) runs arbitrage across pools from different DEXes. It swaps directly against the pools instead of going through one DEX's router, so any pool that follows the Uniswap v3 swap interface works: Uniswap v3, Ramses v3 and giga (a PancakeSwap v3 style fork).
+
+```solidity
+struct Hop { address pool; address tokenIn; }
+
+function arb(uint256 size, Hop[] calldata buy, Hop[] calldata sell, uint256 minProfit) external returns (uint256 profit);
+```
+
+- It flash-borrows `size` USDG from Morpho, runs it through `buy` into the stock and through `sell` back to USDG, repays, and sends the rest to the caller.
+- It reverts with `InsufficientOutput(got, need)` when the round trip does not cover the loan, the fee and `minProfit`. A failed attempt costs gas and nothing else.
+- It returns the profit, so an `eth_call` prices a trade exactly, price impact included. The app does this before it shows a button. A quoted gap means little when one pool is thin.
+- It has no owner, no upgrade path and no state between transactions. The fee and the holder waiver are read from the router (`feeFor`, `treasury`), so there is one fee policy.
+- A swap callback is accepted only from the pool being swapped against, only during that swap, and never for more than the amount sent into it.
+
+Pools with a different callback (Algebra) and Uniswap v4 pools are shown in the app as watch only.
 
 ## The router contract
 
@@ -101,6 +119,8 @@ function closePosition(MarketParams calldata market, bytes calldata path, uint25
 function rotate(MarketParams calldata from, MarketParams calldata to, bytes calldata path, uint256 minCollateralOut) external;
 function arb(uint256 size, bytes calldata buyPath, bytes calldata sellPath, uint256 minProfit) external;
 ```
+
+The router's own `arb` trades Uniswap v3 paths only. The app uses `AtomicArb` above for arbitrage.
 
 `MarketParams` is Morpho's own struct (`loanToken`, `collateralToken`, `oracle`, `irm`, `lltv`). `path` is a packed Uniswap v3 path (`token, fee, token, ...`).
 
@@ -146,7 +166,7 @@ A token that reverts or has no code can never block an action: the normal fee si
 ## Security
 
 - **Verified source.** v1.2 is an exact match on Sourcify.
-- **23 fork tests** run against live mainnet state, split into behaviour ([`AtomicRouter.t.sol`](contracts/test/AtomicRouter.t.sol), 13 tests) and adversarial cases ([`AtomicRouterAudit.t.sol`](contracts/test/AtomicRouterAudit.t.sol), 10 tests).
+- **35 fork tests** run against live mainnet state: router behaviour ([`AtomicRouter.t.sol`](contracts/test/AtomicRouter.t.sol), 13 tests), router adversarial cases ([`AtomicRouterAudit.t.sol`](contracts/test/AtomicRouterAudit.t.sol), 10 tests) and the arbitrage contract ([`AtomicArb.t.sol`](contracts/test/AtomicArb.t.sol), 12 tests against real Uniswap, Ramses and giga pools plus hostile fake pools).
 - **Internal audit.** [`AUDIT.md`](AUDIT.md) lists every finding, the fix and the residual risks. It was written by the team that wrote the code. It is not a third-party audit.
 
 | ID | Severity | Finding | Status |
@@ -168,6 +188,7 @@ Robinhood Chain, chain id 4663.
 | Contract | Address |
 | --- | --- |
 | AtomicRouter v1.2 (live) | `0x82eec2769274eEc9F0BB9063F5B8a9908F3e389b` |
+| AtomicArb (live) | `0xfc36D801680Ca99f4ebE020Ab9967f3249e87A48` |
 | AtomicRouter v1.1 (superseded) | `0xC7056Fe38081b9359997FBCBf94591e2Cf7E34d9` |
 | AtomicRouter v1.0 (superseded) | `0x7D0E0827a8Bbc5a2CD78e5B12226c65cB449a9Ec` |
 | ATOMIC token | `0x658DC84c90A7286480Bb16d009Aa34606345f5fB` |
@@ -177,7 +198,7 @@ Robinhood Chain, chain id 4663.
 | Uniswap v3 Factory | `0x1f7d7550b1b028f7571e69a784071f0205fd2efa` |
 | Uniswap v4 StateView | `0xf3334192d15450cdd385c8b70e03f9a6bd9e673b` |
 | USDG | `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168` |
-| WETH | `0x0Bd7d308F8E1639FaB988DF18A8011f41eACAD73` |
+| WETH | `0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73` |
 | Stock token factory | `0x4783C67b63dE2B358Ac5951a7D41F47A38F3C046` |
 
 Superseded routers hold nothing. Version history is in [`contracts/deployment.json`](contracts/deployment.json).

@@ -11,6 +11,7 @@ import { marketParams, morphoAbi, ROUTER_ABI, ROUTER_ADDRESS, routeToPath, withS
 import { fmtNum, fmtPct, fmtUsd } from "@/lib/math";
 import { clearEntry, getEntry } from "@/lib/entries";
 import { useBorrowers } from "@/hooks/useBorrowers";
+import { ShareButton } from "./ShareCard";
 import { ExecuteFlow, type FlowStep } from "./ExecuteFlow";
 import { Panel, StepList } from "./shared";
 import { WalletButton } from "./WalletButton";
@@ -159,6 +160,10 @@ function PositionCard({ p, address, onChanged }: { p: OnchainPosition; address?:
                 <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-2">Profit since you opened it, live</div>
                 <div className={`mt-1 font-mono text-2xl tabular ${pnl >= 0 ? "text-up" : "text-down"}`}>{pnl >= 0 ? "+" : ""}{fmtUsd(pnl)} <span className="text-base">({pnlPct !== null ? `${pnlPct >= 0 ? "+" : ""}${fmtPct(pnlPct, 1)}` : ""})</span></div>
               </div>
+              <ShareButton
+                data={{ symbol: p.market.symbol, leverage: equity > 0 ? value / equity : 1, pnlPct, pnlUsd: pnl, collateralUsd: value, entryPrice, price, kind: "mine" }}
+                className="inline-flex items-center gap-2 rounded-full border border-line-2 bg-bg/60 px-4 py-2 text-sm text-text transition-colors hover:border-text/40"
+              />
               <div className="text-right font-mono text-[11px] text-muted">
                 {entryPrice !== null && <div>entered at {fmtUsd(entryPrice)}, now {fmtUsd(price)}</div>}
                 {cashIn !== null && <div>you put in {fmtUsd(cashIn)}{since ? ` on ${new Date(since).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}</div>}

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Ticker } from "@/components/ui/primitives";
 import { useBorrowers, type Borrower } from "@/hooks/useBorrowers";
+import { ShareButton } from "./ShareCard";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { useNow } from "@/hooks/useNow";
 import { fmtPct, fmtUsd } from "@/lib/math";
@@ -77,7 +78,7 @@ export function BorrowersPanel() {
           <span>#</span><span>Who</span><span>Stock</span><span className="text-right">Holds</span><span className="text-right">Owes</span><span className="text-right">Their money</span><span className="text-right">Profit, live</span><span className="text-right">Leverage</span><span className="text-right">Closes if drop</span><span className="text-right">Status</span>
         </div>
         {isLoading && !data && Array.from({ length: 6 }, (_, i) => <div key={i} className="border-b border-line px-5 py-4"><div className="skeleton h-4 w-full" /></div>)}
-        {rows.map((b, i) => <BorrowerRow key={`${b.address}-${b.marketId}`} b={b} rank={i + 1} />)}
+        {rows.map((b, i) => <BorrowerRow key={`${b.address}-${b.marketId}`} b={b} rank={i + 1} price={snap?.feeds[b.symbol]?.price ?? null} />)}
         {data && rows.length === 0 && <div className="px-5 py-8 text-center text-sm text-muted">No open loans on this stock right now.</div>}
       </div>
 
@@ -99,14 +100,18 @@ function Pnl({ b }: { b: Borrower }) {
   );
 }
 
-function BorrowerRow({ b, rank }: { b: Borrower; rank: number }) {
+function BorrowerRow({ b, rank, price }: { b: Borrower; rank: number; price: number | null }) {
+  const share = { symbol: b.symbol, leverage: Number.isFinite(b.leverage) ? b.leverage : 1, pnlPct: b.pnlPct, pnlUsd: b.pnlUsd, collateralUsd: b.collateralUsd, entryPrice: b.entryPrice, price, kind: "board" as const };
   const tone = healthTone(b.dropToLiquidation);
   const lev = Number.isFinite(b.leverage) ? `${b.leverage.toFixed(2)}x` : "max";
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(rank, 12) * 0.03 }} className="border-b border-line last:border-b-0">
       <div className="hidden grid-cols-[40px_1.2fr_0.9fr_1fr_1fr_1fr_1.3fr_0.7fr_1fr_1.2fr] items-center gap-3 px-5 py-3.5 text-sm md:grid">
         <span className="font-mono text-xs text-muted-2">{String(rank).padStart(2, "0")}</span>
-        <a href={`${EXPLORER}/address/${b.address}`} target="_blank" rel="noreferrer" className="font-mono text-xs text-text hover:underline">{short(b.address)}</a>
+        <span className="inline-flex items-center gap-2">
+          <a href={`${EXPLORER}/address/${b.address}`} target="_blank" rel="noreferrer" className="font-mono text-xs text-text hover:underline">{short(b.address)}</a>
+          <ShareButton data={share} label="" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-line text-muted-2 transition-colors hover:border-line-2 hover:text-text" />
+        </span>
         <span className="inline-flex items-center gap-2"><Ticker symbol={b.symbol} size="sm" /><span className="font-mono text-xs">{b.symbol}</span></span>
         <span className="text-right font-mono tabular">{fmtUsd(b.collateralUsd)}</span>
         <span className="text-right font-mono tabular">{fmtUsd(b.borrowUsd)}</span>

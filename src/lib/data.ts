@@ -6,7 +6,7 @@ import metaJson from "@/data/meta.json";
 
 export interface Stock { symbol: string; name: string; address: string; block: number }
 export interface Feed { address: string; decimals: number; name: string }
-export interface Pool { symbol: string; stock: string; quote: "USDG" | "WETH"; dex: string; pool: string; name: string; fee: number | null; tvl: number; vol24: number }
+export interface Pool { symbol: string; stock: string; quote: "USDG" | "WETH"; dex: string; pool: string; name: string; fee: number | null; tvl: number; vol24: number; v4?: { fee: number; tickSpacing: number; hooks: string } }
 export interface Market { id: string; symbol: string; collateral: string; oracle: string; irm: string; lltv: number; supplyUSDG: number; borrowUSDG: number }
 
 export const STOCKS = stocksJson as Stock[];

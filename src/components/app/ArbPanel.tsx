@@ -16,7 +16,7 @@ import { Panel, StepList } from "./shared";
 import { ExecuteFlow } from "./ExecuteFlow";
 import { ARB_ABI, ARB_ADDRESS } from "@/lib/router";
 
-import { ARB_DEXES, arbHops, buildOpps, type Opp } from "@/lib/arb";
+import { V4, arbHops, buildOpps, tradable, type Opp } from "@/lib/arb";
 
 const venueName = (v: VenuePrice) => `${dexLabel(v.dex)}${v.fee ? ` ${(v.fee / 10000).toFixed(2)}%` : ""} (${v.quote} pool)`;
 
@@ -55,7 +55,7 @@ export function ArbPanel() {
   const pairs = opps.filter((o) => o.venues.length > 1);
   const watching = opps.filter((o) => o.venues.length === 1);
   const ready = pairs.filter((o) => o.net > 0 && o.executable);
-  const blocked = pairs.filter((o) => o.net > 0 && !o.executable); // profitable, but one side is not Uniswap v3
+  const blocked = pairs.filter((o) => o.net > 0 && !o.executable); // profitable, but one side is a pool the contract cannot trade
 
   return (
     <div className="grid gap-5">
@@ -80,7 +80,7 @@ export function ArbPanel() {
         {[
           { l: "Gaps that pay on paper", v: data ? String(ready.length) : "-", s: "each one is simulated below" },
           { l: "Stocks with two or more pools", v: data ? String(pairs.length) : "-", s: "compared every 10 seconds" },
-          { l: "Pools watched", v: data ? String(data.venues.length) : "-", s: "Uniswap v3, Ramses, giga, v4" },
+          { l: "Pools watched", v: data ? String(data.venues.length) : "-", s: "Uniswap v3 and v4, Ramses, giga" },
         ].map((c) => (
           <div key={c.l} className="card p-4">
             <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-2">{c.l}</div>
@@ -103,7 +103,7 @@ export function ArbPanel() {
                 <b>Nothing to take right now, so no card shows a Take it button.</b>{" "}
                 <span className="text-muted">
                   The button appears on a card when its gap is bigger than the pool fees and a simulation of the real trade makes money.
-                  {blocked.length > 0 && <> {blocked.length === 1 ? "One gap pays" : `${blocked.length} gaps pay`} today ({blocked.map((o) => o.symbol).join(", ")}) but {blocked.length === 1 ? "sits" : "sit"} on a pool the router cannot trade yet.</>}
+                  {blocked.length > 0 && <> {blocked.length === 1 ? "One gap pays" : `${blocked.length} gaps pay`} today ({blocked.map((o) => o.symbol).join(", ")}) but {blocked.length === 1 ? "sits" : "sit"} on a pool ATOMIC cannot trade yet.</>}
                   {" "}Gaps come and go within seconds, so check back or keep this tab open.
                 </span>
               </div>
@@ -234,7 +234,7 @@ function PairCard({ o, sz }: { o: Opp; sz: number }) {
       ) : (
         <p className="mt-4 rounded-xl border border-line px-3 py-2.5 text-xs leading-relaxed text-muted">
           {!o.executable ? (
-            <>Watch only. One side of this gap is on {[o.buy, o.sell].filter((v) => !ARB_DEXES.has(v.dex)).map((v) => dexLabel(v.dex)).filter((v, k, a) => a.indexOf(v) === k).join(" and ")}, which ATOMIC cannot trade yet. It trades Uniswap v3, Ramses and giga pools.</>
+            <>Watch only. One side of this gap is on {[o.buy, o.sell].filter((v) => !tradable(v)).map((v) => (v.dex === V4 ? "a Uniswap v4 pool with a custom hook" : dexLabel(v.dex))).filter((v, k, a) => a.indexOf(v) === k).join(" and ")}, which ATOMIC cannot trade yet. It trades Uniswap v3, Uniswap v4 without hooks, Ramses and giga pools.</>
           ) : o.net <= 0 ? (
             <>Nothing to take yet. The gap is smaller than the two pool fees combined.</>
           ) : sim.isLoading ? (

@@ -77,7 +77,7 @@ async function build(): Promise<Snapshot> {
     if (liquidity === 0n) continue;
     if (feed && Math.abs(price / feed - 1) > 0.5) continue;
     venues.push({
-      symbol: p.symbol, pool: p.pool, dex: p.dex, quote: p.quote, fee: p.fee, price,
+      symbol: p.symbol, pool: p.pool, dex: p.dex, quote: p.quote, fee: p.fee, price, v4: p.v4,
       tvl: p.tvl, vol24: p.vol24, liquidity: String(liquidity),
       deviation: feed ? (price - feed) / feed : 0,
     });

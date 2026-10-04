@@ -65,16 +65,20 @@ contract AtomicArbForkTest is Test {
     address constant CRCL_UNI_USDG = 0x654E4143e82a5824445Ade0824351C2A9ACD95a8;
     address constant CRCL_GIGA_USDG = 0xD6032036aD225Ff5143c1533FE8274437ea68ca6;
 
+    address constant POOL_MANAGER = 0x8366a39CC670B4001A1121B8F6A443A643e40951; // Uniswap v4
+    address constant META = 0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35;
+    address constant META_UNI_V3_USDG = 0x107a7Cb40d8665360ba10E59471Af06150A50922;
+
     AtomicArb arb;
     address user = makeAddr("user");
 
     function setUp() public {
         vm.createSelectFork(vm.envOr("RPC_URL", string("https://robinhood.drpc.org")));
-        arb = new AtomicArb(MORPHO, USDG, ROUTER);
+        arb = new AtomicArb(MORPHO, USDG, ROUTER, POOL_MANAGER);
     }
 
     function _hop(address pool, address tokenIn) internal pure returns (AtomicArb.Hop memory) {
-        return AtomicArb.Hop({pool: pool, tokenIn: tokenIn});
+        return AtomicArb.Hop({pool: pool, tokenIn: tokenIn, tokenOut: address(0), fee: 0, tickSpacing: 0, hooks: address(0)});
     }
 
     function _one(address pool, address tokenIn) internal pure returns (AtomicArb.Hop[] memory h) {
@@ -121,6 +125,48 @@ contract AtomicArbForkTest is Test {
 
     function test_gigaBuy_uniswapSell() public {
         _assertRoundTrip(100e6, _one(CRCL_GIGA_USDG, USDG), _one(CRCL_UNI_USDG, CRCL), "giga -> uniswap", 8_000);
+    }
+
+    // ---- Uniswap v4 ----
+
+    /// @dev META / USDG on v4. `fee` and `tickSpacing` select the pool: 0.30% / 60 and 0.031% / 3 both exist.
+    function _v4(address tokenIn, address tokenOut, uint24 fee, int24 tickSpacing) internal pure returns (AtomicArb.Hop[] memory h) {
+        h = new AtomicArb.Hop[](1);
+        h[0] = AtomicArb.Hop({pool: POOL_MANAGER, tokenIn: tokenIn, tokenOut: tokenOut, fee: fee, tickSpacing: tickSpacing, hooks: address(0)});
+    }
+
+    function test_v4Buy_v3Sell() public {
+        _assertRoundTrip(500e6, _v4(USDG, META, 3000, 60), _one(META_UNI_V3_USDG, META), "v4 -> uniswap v3", 9_700);
+        assertEq(IERC20(META).balanceOf(address(arb)), 0, "no stock left behind");
+    }
+
+    function test_v3Buy_v4Sell() public {
+        _assertRoundTrip(500e6, _one(META_UNI_V3_USDG, USDG), _v4(META, USDG, 3000, 60), "uniswap v3 -> v4", 9_700);
+    }
+
+    function test_v4Buy_v4Sell() public {
+        _assertRoundTrip(500e6, _v4(USDG, META, 3000, 60), _v4(META, USDG, 310, 3), "v4 -> v4", 9_700);
+    }
+
+    function test_v4UnknownPool_reverts() public {
+        vm.prank(user);
+        vm.expectRevert(); // the PoolManager rejects a key that was never initialized
+        arb.arb(100e6, _v4(USDG, META, 3000, 61), _one(META_UNI_V3_USDG, META), 0);
+    }
+
+    function test_v4HopMustNameADifferentOutput() public {
+        vm.prank(user);
+        vm.expectRevert(AtomicArb.BadPath.selector);
+        arb.arb(100e6, _v4(USDG, USDG, 3000, 60), _one(META_UNI_V3_USDG, META), 0);
+    }
+
+    function test_unlockCallbackFromStranger_reverts() public {
+        vm.expectRevert(AtomicArb.NotPoolManager.selector);
+        arb.unlockCallback("");
+        // the PoolManager itself cannot be used to reach it outside a trade either
+        vm.prank(POOL_MANAGER);
+        vm.expectRevert(AtomicArb.NoContext.selector);
+        arb.unlockCallback("");
     }
 
     // ---- deterministic money flow ----

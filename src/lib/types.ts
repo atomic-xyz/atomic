@@ -4,6 +4,8 @@ export interface VenuePrice {
   price: number;
   tvl: number; vol24: number; liquidity: string;
   deviation: number;
+  /** Uniswap v4 only: the rest of the pool key, present when the pool has no hook and can be traded */
+  v4?: { fee: number; tickSpacing: number; hooks: string };
 }
 export interface MarketLive {
   id: string; symbol: string; collateral: string; lltv: number; oracle: string; irm: string;

@@ -20,7 +20,7 @@ export const ADDR = {
 /** Set NEXT_PUBLIC_ATOMIC_ROUTER once the execution contract is deployed. */
 export const ATOMIC_ROUTER = (process.env.NEXT_PUBLIC_ATOMIC_ROUTER ?? "") as `0x${string}` | "";
 /** Multi-DEX arbitrage contract (direct pool swaps). Override with NEXT_PUBLIC_ATOMIC_ARB. */
-export const ATOMIC_ARB = (process.env.NEXT_PUBLIC_ATOMIC_ARB ?? "0xfc36D801680Ca99f4ebE020Ab9967f3249e87A48") as `0x${string}`;
+export const ATOMIC_ARB = (process.env.NEXT_PUBLIC_ATOMIC_ARB ?? "0x4825A35C74Ffc5E6a6B60908136431F85F7A9fE7") as `0x${string}`;
 /** Uniswap v3 WETH/USDG 0.01% pool: the bridge between WETH-quoted stock pools and USDG. */
 export const WETH_USDG_POOL = "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca" as `0x${string}`;
 

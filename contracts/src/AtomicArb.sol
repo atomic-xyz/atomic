@@ -12,7 +12,7 @@ interface IAtomicFees {
 }
 
 /// @notice The part of a Uniswap v3 style pool this contract uses. Ramses v3, PancakeSwap v3 style forks and
-///         Uniswap v3 itself all share it; they differ only in the name of the swap callback.
+///         Algebra pools and Uniswap v3 itself all share it; they differ only in the name of the swap callback.
 interface IV3PoolLike {
     function token0() external view returns (address);
     function token1() external view returns (address);
@@ -234,6 +234,11 @@ contract AtomicArb is IMorphoFlashLoanCallback {
 
     /// @notice PancakeSwap v3 style pools call this to collect the input of a swap.
     function pancakeV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata) external {
+        _pay(amount0Delta, amount1Delta);
+    }
+
+    /// @notice Algebra pools call this to collect the input of a swap.
+    function algebraSwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata) external {
         _pay(amount0Delta, amount1Delta);
     }
 

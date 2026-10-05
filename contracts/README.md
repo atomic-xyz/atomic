@@ -6,7 +6,7 @@
 
 - `src/AtomicRouter.sol` - the router. Entry points: `openLeverage`, `closePosition`, `rotate`, `arb`. Everything runs inside `onMorphoFlashLoan`; any failure reverts the whole transaction.
 - `src/interfaces/` - the minimal Morpho Blue and SwapRouter02 surfaces the router uses.
-- `src/AtomicArb.sol` - ownerless multi-DEX arbitrage with direct pool swaps and Uniswap v4 hops, v2 live at `0x4825A35C74Ffc5E6a6B60908136431F85F7A9fE7` (v1 at `0xfc36D801680Ca99f4ebE020Ab9967f3249e87A48` is superseded). Tests in `test/AtomicArb.t.sol`.
+- `src/AtomicArb.sol` - ownerless multi-DEX arbitrage with direct pool swaps and Uniswap v4 hops, v3 live at `0x65Db7Bf6Bc52C4725117f7490617b13d7a8e3fB9` (v1 at `0xfc36D801680Ca99f4ebE020Ab9967f3249e87A48` is superseded). Tests in `test/AtomicArb.t.sol`.
 - `test/AtomicRouter.t.sol` - fork tests against mainnet state (real NVDA and AAPL markets, real pools).
 - `script/Deploy.s.sol` - deployment script.
 

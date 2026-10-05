@@ -5,7 +5,7 @@ import type { Snapshot, VenuePrice } from "@/lib/types";
 export const V3 = "uniswap-v3-robinhood";
 
 /** Pool families AtomicArb can swap against directly: Uniswap v3 and forks that keep its swap interface. */
-export const ARB_DEXES = new Set(["uniswap-v3-robinhood", "ramses-v3-robinhood", "sushiswap-v3-robinhood", "giga-v3"]);
+export const ARB_DEXES = new Set(["uniswap-v3-robinhood", "ramses-v3-robinhood", "sushiswap-v3-robinhood", "giga-v3", "up-v3", "alandale-cl"]);
 
 export const V4 = "uniswap-v4-robinhood";
 const ZERO = "0x0000000000000000000000000000000000000000" as Address;
@@ -69,12 +69,22 @@ export function buildOpps(data: Snapshot | undefined): Opp[] {
   for (const [symbol, venues] of bySym) {
     const feed = data.feeds[symbol]?.price ?? 0;
     const sorted = [...venues].sort((a, b) => a.price - b.price);
-    const buy = sorted[0];
-    const sell = sorted[sorted.length - 1];
     const multi = venues.length > 1;
+    // Among the pools the contract can trade, take the pair that leaves the most after both pool fees.
+    // That is not always the cheapest and the dearest pool: a wide gap on a 1% pool can lose to a
+    // narrower gap between two cheap pools.
+    const open = sorted.filter(tradable);
+    let pair: [VenuePrice, VenuePrice] | null = null;
+    let best = -Infinity;
+    for (const b of open) for (const s of open) {
+      if (b === s) continue;
+      const n = s.price / b.price - 1 - feeOf(b) - feeOf(s);
+      if (n > best) { best = n; pair = [b, s]; }
+    }
+    const executable = !!pair;
+    const [buy, sell] = pair ?? [sorted[0], sorted[sorted.length - 1]];
     const gross = multi ? sell.price / buy.price - 1 : 0;
     const fees = multi ? feeOf(buy) + feeOf(sell) : 0;
-    const executable = multi && tradable(buy) && tradable(sell);
     out.push({ symbol, feed, buy, sell, gross, fees, net: gross - fees, venues: sorted, executable });
   }
   return out.sort((a, b) => b.net - a.net);

@@ -75,15 +75,15 @@ Owner and treasury: `0x4fc22D5bbC37fBcC453C1FA099406e324B485C9f`.
 
 ## AtomicArb (added 2026-10-03)
 
-`AtomicArb` (now v2 at `0x4825A35C74Ffc5E6a6B60908136431F85F7A9fE7`, which adds Uniswap v4 hops; v1 at `0xfc36D801680Ca99f4ebE020Ab9967f3249e87A48` is superseded and holds nothing) was added after the review above and went through the same internal review, not a third-party audit. What was checked:
+`AtomicArb` (now v3 at `0x65Db7Bf6Bc52C4725117f7490617b13d7a8e3fB9`, which adds the Algebra swap callback; v2 at `0x4825A35C74Ffc5E6a6B60908136431F85F7A9fE7` added Uniswap v4 hops; v1 at `0xfc36D801680Ca99f4ebE020Ab9967f3249e87A48` and v2 are superseded and hold nothing) was added after the review above and went through the same internal review, not a third-party audit. What was checked:
 
-- **Callback authentication.** `uniswapV3SwapCallback` and `pancakeV3SwapCallback` pay only the pool currently being swapped against, only while a trade is in progress, in the token that was sent into the swap, and never more than that amount. A hostile pool asking for more, or calling back twice, reverts (`test_poolCannotTakeMoreThanItWasSent`, `test_poolCannotCallBackTwice`).
+- **Callback authentication.** `uniswapV3SwapCallback`, `pancakeV3SwapCallback` and `algebraSwapCallback` pay only the pool currently being swapped against, only while a trade is in progress, in the token that was sent into the swap, and never more than that amount. A hostile pool asking for more, or calling back twice, reverts (`test_poolCannotTakeMoreThanItWasSent`, `test_poolCannotCallBackTwice`).
 - **Uniswap v4 hops (v2).** `unlockCallback` runs only when the caller is the PoolManager and this contract opened the lock itself in the same trade (`test_unlockCallbackFromStranger_reverts`). It accepts whole fills only, so no input can be stranded, and it settles exactly what the swap reported. Round trips through real v4 pools are covered by `test_v4Buy_v3Sell`, `test_v3Buy_v4Sell` and `test_v4Buy_v4Sell`.
 - **Path integrity.** Each hop must take the token the previous hop produced, the first hop must take USDG and the last must return USDG (`test_pathMustChain`).
 - **No custody and no privilege.** The contract has no owner and no stored balances. A caller can pass any pool address, including a malicious one, but the only funds at risk inside a call are that caller's own flash loan, and the transaction reverts unless the loan and fee are covered.
 - **Fee policy.** Fee and holder waiver are read from the router, so they cannot drift apart (`test_profitGoesToCaller_feeToTreasury`, `test_holderPaysNoFee`).
 
-Known limits: pools that use a different callback name (Algebra) are not supported. The contract accepts any v4 pool key, including hooked pools, but the app only offers hookless pools; a hook can change the outcome of a swap, and the profit check at the end is what bounds it. Arbitrage transactions can be front-run; `minProfit` bounds the outcome and a losing attempt reverts.
+Known limits: the contract accepts any v4 pool key, including hooked pools, but the app only offers hookless pools; a hook can change the outcome of a swap, and the profit check at the end is what bounds it. Arbitrage transactions can be front-run; `minProfit` bounds the outcome and a losing attempt reverts.
 
 ## Residual risks (not code defects)
 

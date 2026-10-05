@@ -13,6 +13,16 @@ export const v3PoolAbi = parseAbi([
   "function fee() view returns (uint24)",
 ]);
 
+/** Slipstream style pools (Up): slot0 has no feeProtocol field. */
+export const slipstreamPoolAbi = parseAbi([
+  "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,bool unlocked)",
+]);
+
+/** Algebra pools (Alandale): price and the current fee live in globalState. */
+export const algebraPoolAbi = parseAbi([
+  "function globalState() view returns (uint160 price,int24 tick,uint16 lastFee,uint8 pluginConfig,uint16 communityFee,bool unlocked)",
+]);
+
 export const stateViewAbi = parseAbi([
   "function getSlot0(bytes32 poolId) view returns (uint160 sqrtPriceX96,int24 tick,uint24 protocolFee,uint24 lpFee)",
   "function getLiquidity(bytes32 poolId) view returns (uint128)",

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { Abi, Address, Hex } from "viem";
 import { publicClient } from "@/lib/chain";
 import { ADDR } from "@/lib/addresses";
-import { aggregatorAbi, erc20Abi, irmAbi, morphoAbi, morphoOracleAbi, stateViewAbi, v3PoolAbi } from "@/lib/abis";
+import { aggregatorAbi, algebraPoolAbi, erc20Abi, irmAbi, morphoAbi, morphoOracleAbi, slipstreamPoolAbi, stateViewAbi, v3PoolAbi } from "@/lib/abis";
 import { FEEDS, POOLS, PRIMARY_MARKETS, STOCKS, TRADABLE_SYMBOLS } from "@/lib/data";
 import { priceFromSqrt, ratePerSecondToApy, tokenOrder } from "@/lib/math";
 import type { Snapshot, VenuePrice, MarketLive, FeedPrice } from "@/lib/types";
@@ -29,10 +29,15 @@ async function build(): Promise<Snapshot> {
     if (p.dex === "uniswap-v4-robinhood") {
       calls.push({ address: ADDR.UNI_V4_STATE_VIEW as Address, abi: stateViewAbi, functionName: "getSlot0", args: [p.pool as Hex] });
       calls.push({ address: ADDR.UNI_V4_STATE_VIEW as Address, abi: stateViewAbi, functionName: "getLiquidity", args: [p.pool as Hex] });
+    } else if (p.dex === "alandale-cl") {
+      calls.push({ address: p.pool as Address, abi: algebraPoolAbi, functionName: "globalState" });
+      calls.push({ address: p.pool as Address, abi: v3PoolAbi, functionName: "liquidity" });
     } else {
-      calls.push({ address: p.pool as Address, abi: v3PoolAbi, functionName: "slot0" });
+      calls.push({ address: p.pool as Address, abi: p.dex === "up-v3" ? slipstreamPoolAbi : v3PoolAbi, functionName: "slot0" });
       calls.push({ address: p.pool as Address, abi: v3PoolAbi, functionName: "liquidity" });
     }
+    // The fee a pool charges right now. Listings can be stale and some pools change their fee.
+    calls.push({ address: p.pool.length === 42 ? (p.pool as Address) : (ADDR.USDG as Address), abi: v3PoolAbi, functionName: "fee" });
   }
   for (const m of PRIMARY_MARKETS) {
     calls.push({ address: ADDR.MORPHO as Address, abi: morphoAbi, functionName: "market", args: [m.id as Hex] });
@@ -63,7 +68,11 @@ async function build(): Promise<Snapshot> {
   for (const p of POOLS) {
     const slot = res[i++];
     const liq = res[i++];
+    const feeR = res[i++];
     if (slot.status !== "success") continue;
+    let fee = p.fee;
+    if (p.dex === "alandale-cl") fee = Number((slot.result as readonly unknown[])[2]);
+    else if (p.dex !== "uniswap-v4-robinhood" && feeR.status === "success") fee = Number(feeR.result);
     const sqrt = (slot.result as readonly bigint[])[0];
     const quoteAddr = p.quote === "USDG" ? ADDR.USDG : ADDR.WETH;
     const [t0] = tokenOrder(p.stock, quoteAddr);
@@ -77,7 +86,7 @@ async function build(): Promise<Snapshot> {
     if (liquidity === 0n) continue;
     if (feed && Math.abs(price / feed - 1) > 0.5) continue;
     venues.push({
-      symbol: p.symbol, pool: p.pool, dex: p.dex, quote: p.quote, fee: p.fee, price, v4: p.v4,
+      symbol: p.symbol, pool: p.pool, dex: p.dex, quote: p.quote, fee, price, v4: p.v4,
       tvl: p.tvl, vol24: p.vol24, liquidity: String(liquidity),
       deviation: feed ? (price - feed) / feed : 0,
     });

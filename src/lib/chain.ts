@@ -36,7 +36,8 @@ export function rpcTransport() {
   return fallback(
     (urls.length ? urls : RPC_URLS).map((url) =>
       http(url, {
-        batch: true,
+        // dRPC's free plan rejects JSON-RPC batches of more than three requests with HTTP 500.
+        batch: { batchSize: 3, wait: 8 },
         retryCount: 1,
         retryDelay: 300,
         // A local fork (anvil) lazily pulls state from upstream, so its first calls are slow.

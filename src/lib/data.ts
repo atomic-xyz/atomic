@@ -15,7 +15,7 @@ export const FEEDS = feedsJson as Record<string, Feed>;
 export const ALL_POOLS = poolsJson as Pool[];
 export const MIN_POOL_TVL_USD = 5_000;
 /** DEX families whose pools expose a Uniswap v3 style slot0 (or v4 StateView) that the snapshot can price. */
-export const PRICEABLE_DEXES = new Set(["uniswap-v3-robinhood", "uniswap-v4-robinhood", "ramses-v3-robinhood", "sushiswap-v3-robinhood", "giga-v3"]);
+export const PRICEABLE_DEXES = new Set(["uniswap-v3-robinhood", "uniswap-v4-robinhood", "ramses-v3-robinhood", "sushiswap-v3-robinhood", "giga-v3", "up-v3", "alandale-cl"]);
 export const POOLS: Pool[] = ALL_POOLS.filter((p) => p.tvl >= MIN_POOL_TVL_USD && PRICEABLE_DEXES.has(p.dex));
 export const MARKETS = marketsJson as Market[];
 export const DATA_META = metaJson as { generatedAt: string; block: number };
@@ -36,8 +36,9 @@ export const DEX_LABEL: Record<string, string> = {
   "uniswap-v4-robinhood": "Uniswap v4",
   "uniswap-v2-robinhood": "Uniswap v2",
   "ramses-v3-robinhood": "Ramses CL",
-  "up-v3": "Up v3",
-  "alandale-cl": "Alandale CL",
+  "up-v3": "Up",
+  "giga-v3": "giga",
+  "alandale-cl": "Alandale",
   "sushiswap-v3-robinhood": "Sushi v3",
 };
 export const dexLabel = (id: string) => DEX_LABEL[id] ?? id;

@@ -40,8 +40,6 @@ function shortfallOf(err: unknown): number | null {
   return m ? Number(BigInt("0x" + m[2]) - BigInt("0x" + m[1])) / 1e6 : null;
 }
 
-// A wallet with no ATOMIC, used to price trades when nobody is connected.
-const SIM_ACCOUNT = "0x1111111111111111111111111111111111111111" as Address;
 
 export function ArbPanel() {
   const { data, dataUpdatedAt } = useSnapshot();
@@ -156,29 +154,53 @@ function PairCard({ o, sz }: { o: Opp; sz: number }) {
   const gapUsd = o.sell.price - o.buy.price;
   const tone = o.net > 0.001 ? "up" : o.net > 0 ? "warn" : "muted";
   const toneText = { up: "text-up", warn: "text-warn", muted: "text-muted" }[tone];
-  const sizeRaw = BigInt(Math.round(sz * 1e6));
   const { address } = useAccount();
   const candidate = o.executable && o.net > 0 && !!stockAddr && sz > 0;
   const buyHops = stockAddr ? arbHops(o.buy, stockAddr, "buy") : [];
   const sellHops = stockAddr ? arbHops(o.sell, stockAddr, "sell") : [];
 
-  // Run the exact trade as an eth_call. Quoted gaps ignore depth: a pool can show a great price and hold
-  // almost nothing, so only the simulated result decides whether there is anything to take.
+  // Run the exact trade as an eth_call, at the chosen size and at smaller ones. Quoted gaps ignore depth:
+  // a thin pool can pay at 50 USDG and lose at 5,000, so the card looks for the size that pays the most.
   const client = usePublicClient();
+  const ladder = Array.from(new Set([sz, sz / 4, sz / 20, sz / 100, 10].map((v) => Math.round(v)).filter((v) => v >= 5 && v <= sz))).sort((x, y) => y - x);
   const sim = useQuery({
-    queryKey: ["arb-sim", o.symbol, o.buy.pool, o.sell.pool, sizeRaw.toString(), address ?? ""],
-    enabled: candidate && !!client,
-    refetchInterval: 10_000,
-    retry: false,
+    queryKey: ["arb-sim", o.symbol, o.buy.pool, o.sell.pool, ladder.join(","), address ?? ""],
+    enabled: candidate && !!client && ladder.length > 0,
+    refetchInterval: 15_000,
+    retry: 1,
     queryFn: async () => {
-      const r = await client!.simulateContract({
-        address: ARB_ADDRESS, abi: ARB_ABI, functionName: "arb", args: [sizeRaw, buyHops, sellHops, 0n], account: address ?? SIM_ACCOUNT,
+      // One eth_call for the whole ladder, through Multicall3, so a busy board does not flood the RPC.
+      const res = await client!.multicall({
+        allowFailure: true,
+        contracts: ladder.map((size) => ({ address: ARB_ADDRESS, abi: ARB_ABI, functionName: "arb", args: [BigInt(size) * 1_000_000n, buyHops, sellHops, 0n] })),
       });
-      return r.result as bigint;
+      const runs = res.map((r, k) => r.status === "success"
+        ? { size: ladder[k], profit: Number(r.result as bigint) / 1e6, shortfall: null as number | null }
+        : { size: ladder[k], profit: null as number | null, shortfall: shortfallOf(r.error) });
+      const wins = runs.filter((r) => r.profit !== null && r.profit > 0).sort((x, y) => y.profit! - x.profit!);
+      const losses = runs.filter((r) => r.shortfall !== null).sort((x, y) => x.shortfall! - y.shortfall!);
+      let best: (typeof runs)[number] | null = wins[0] ?? null;
+      const closest = losses[0] ?? null;
+      // The ladder runs as a wallet that pays the ATOMIC fee. A connected wallet may hold enough ATOMIC to
+      // pay none, so price the most promising size once more as that wallet.
+      const probe = best ?? closest;
+      if (address && probe) {
+        try {
+          const r = await client!.simulateContract({
+            address: ARB_ADDRESS, abi: ARB_ABI, functionName: "arb", args: [BigInt(probe.size) * 1_000_000n, buyHops, sellHops, 0n], account: address,
+          });
+          const profit = Number(r.result as bigint) / 1e6;
+          best = profit > 0 ? { size: probe.size, profit, shortfall: null } : null;
+        } catch {
+          best = null;
+        }
+      }
+      return { best, closest };
     },
   });
-  const simProfit = sim.data !== undefined ? Number(sim.data) / 1e6 : null;
-  const simShortfall = shortfallOf(sim.error);
+  const simProfit = sim.data?.best?.profit ?? null;
+  const simSize = sim.data?.best?.size ?? sz;
+  const closest = sim.data?.closest ?? null;
   const takeable = candidate && simProfit !== null && simProfit > 0;
 
   const steps = [
@@ -222,11 +244,11 @@ function PairCard({ o, sz }: { o: Opp; sz: number }) {
         <div className="mt-4">
           <ExecuteFlow
             steps={[{
-              key: "arb", label: `Take the ${o.symbol} gap`, detail: `${fmtNum(sz, 0)} USDG borrowed`, needed: true,
+              key: "arb", label: `Take the ${o.symbol} gap`, detail: `${fmtNum(simSize, 0)} USDG borrowed`, needed: true,
               // ask for at least half of the simulated profit, so a small move in between does not cancel it
-              run: () => writeContractAsync({ address: ARB_ADDRESS, abi: ARB_ABI, functionName: "arb", args: [sizeRaw, buyHops, sellHops, BigInt(Math.floor((simProfit ?? 0) * 1e6)) / 2n] }),
+              run: () => writeContractAsync({ address: ARB_ADDRESS, abi: ARB_ABI, functionName: "arb", args: [BigInt(simSize) * 1_000_000n, buyHops, sellHops, BigInt(Math.floor((simProfit ?? 0) * 1e6)) / 2n] }),
             }]}
-            label={`Take it: ${fmtUsd(simProfit ?? 0)} simulated`}
+            label={`Take it: ${fmtUsd(simProfit ?? 0)} simulated at ${fmtUsd(simSize, 0)}`}
             compact
             ready={takeable}
           />
@@ -238,9 +260,9 @@ function PairCard({ o, sz }: { o: Opp; sz: number }) {
           ) : o.net <= 0 ? (
             <>Nothing to take yet. The gap is smaller than the two pool fees combined.</>
           ) : sim.isLoading ? (
-            <>Simulating the real trade at {fmtUsd(sz, 0)}.</>
-          ) : simShortfall !== null ? (
-            <>Simulated at {fmtUsd(sz, 0)}: the trade would come back <b className="text-down">{fmtUsd(simShortfall)} short</b>. The quoted gap does not survive a real trade, usually because one pool is too thin. Try a smaller size.</>
+            <>Simulating the real trade at {ladder.length} sizes.</>
+          ) : closest ? (
+            <>Simulated at {ladder.length} sizes from {fmtUsd(ladder[ladder.length - 1], 0)} to {fmtUsd(ladder[0], 0)}: none makes money. The closest is <b className="text-down">{fmtUsd(closest.shortfall ?? 0)} short</b> at {fmtUsd(closest.size, 0)}. The quoted gap does not survive a real trade: price impact and fees eat it.</>
           ) : (
             <>The simulation did not go through, so there is nothing safe to take right now.</>
           )}

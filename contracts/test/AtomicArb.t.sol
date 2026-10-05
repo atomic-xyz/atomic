@@ -65,6 +65,11 @@ contract AtomicArbForkTest is Test {
     address constant CRCL_UNI_USDG = 0x654E4143e82a5824445Ade0824351C2A9ACD95a8;
     address constant CRCL_GIGA_USDG = 0xD6032036aD225Ff5143c1533FE8274437ea68ca6;
 
+    address constant SPY_ALGEBRA_USDG = 0x05E146F995aA70d0BF8481Ee3D27368A537a8e0D; // alandale, Algebra callback
+    address constant NVDA = 0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC;
+    address constant NVDA_UP_USDG = 0x18A5aF4E442F8be68968Cc1f00D537F8af2D12Cd; // up, Slipstream style
+    address constant NVDA_UNI_V3_USDG = 0xd4EB21209C4D6093f80B5b84f5C45cc093EA14a3;
+
     address constant POOL_MANAGER = 0x8366a39CC670B4001A1121B8F6A443A643e40951; // Uniswap v4
     address constant META = 0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35;
     address constant META_UNI_V3_USDG = 0x107a7Cb40d8665360ba10E59471Af06150A50922;
@@ -125,6 +130,20 @@ contract AtomicArbForkTest is Test {
 
     function test_gigaBuy_uniswapSell() public {
         _assertRoundTrip(100e6, _one(CRCL_GIGA_USDG, USDG), _one(CRCL_UNI_USDG, CRCL), "giga -> uniswap", 8_000);
+    }
+
+    // ---- Algebra and Slipstream style pools ----
+
+    function test_algebraBuy_ramsesSell() public {
+        _assertRoundTrip(500e6, _one(SPY_ALGEBRA_USDG, USDG), _one(SPY_RAMSES_USDG, SPY), "algebra -> ramses", 9_700);
+    }
+
+    function test_ramsesBuy_algebraSell() public {
+        _assertRoundTrip(500e6, _one(SPY_RAMSES_USDG, USDG), _one(SPY_ALGEBRA_USDG, SPY), "ramses -> algebra", 9_700);
+    }
+
+    function test_slipstreamBuy_uniswapSell() public {
+        _assertRoundTrip(500e6, _one(NVDA_UP_USDG, USDG), _one(NVDA_UNI_V3_USDG, NVDA), "up -> uniswap v3", 9_700);
     }
 
     // ---- Uniswap v4 ----
@@ -235,6 +254,8 @@ contract AtomicArbForkTest is Test {
         arb.uniswapV3SwapCallback(1, 0, "");
         vm.expectRevert(AtomicArb.NotActivePool.selector);
         arb.pancakeV3SwapCallback(0, 1, "");
+        vm.expectRevert(AtomicArb.NotActivePool.selector);
+        arb.algebraSwapCallback(1, 0, "");
     }
 
     function test_flashCallbackFromStranger_reverts() public {

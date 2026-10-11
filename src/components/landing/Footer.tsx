@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { XIcon, X_URL } from "@/components/ui/XLink";
 import { Logo } from "@/components/ui/primitives";
+import { TokenAddress } from "@/components/ui/TokenAddress";
 import { ADDR, EXPLORER } from "@/lib/addresses";
 import { DATA_META } from "@/lib/data";
 
@@ -18,7 +19,7 @@ export function Footer() {
                 <br />
                 <span className="font-display italic text-flash">Before the next block</span>
               </h2>
-              <p className="mt-5 max-w-md text-muted">Quotes, health factors and spreads are live now. Mainnet execution opens when the router is verified.</p>
+              <p className="mt-5 max-w-md text-muted">Quotes, health factors and spreads are live. Execution is live on mainnet, one signature per position.</p>
             </div>
             <Link href="/app" className="btn-flash rounded-full px-7 py-3.5 text-sm">
               Open the app
@@ -26,7 +27,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-14 grid gap-10 border-t border-line pt-10 md:grid-cols-[1.2fr_1fr_1fr_1fr]">
+        <div className="mt-14 grid gap-10 border-t border-line pt-10 md:grid-cols-[1.2fr_1fr_1fr_1fr_1fr]">
           <div>
             <Logo />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">Perpetual leverage on tokenized stocks. One transaction to open, one to close, no expiry.</p>
@@ -50,6 +51,15 @@ export function Footer() {
               <li><a href={`${EXPLORER}/address/${ADDR.UNI_V3_FACTORY}`} target="_blank" rel="noreferrer" className="hover:text-text">Uniswap v3</a></li>
               <li><a href={`${EXPLORER}/address/${ADDR.UNI_V4_POOL_MANAGER}`} target="_blank" rel="noreferrer" className="hover:text-text">Uniswap v4</a></li>
               <li><a href={`${EXPLORER}/address/${ADDR.STOCK_FACTORY}`} target="_blank" rel="noreferrer" className="hover:text-text">Stock token factory</a></li>
+            </ul>
+          </div>
+          <div className="text-sm">
+            <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-2">Token</div>
+            <ul className="mt-4 space-y-2 text-muted">
+              <li><TokenAddress className="text-xs" /></li>
+              <li className="text-xs">Hold 100,000 ATOMIC, pay no router fee</li>
+              <li><a href="https://ponsfamily.com" target="_blank" rel="noreferrer" className="hover:text-text">Buy on Pons</a></li>
+              <li><Link href="/app?tab=holders" className="hover:text-text">Holder perks</Link></li>
             </ul>
           </div>
           <div className="text-sm">

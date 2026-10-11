@@ -24,4 +24,6 @@ export const ATOMIC_ARB = (process.env.NEXT_PUBLIC_ATOMIC_ARB ?? "0x65Db7Bf6Bc52
 /** Uniswap v3 WETH/USDG 0.01% pool: the bridge between WETH-quoted stock pools and USDG. */
 export const WETH_USDG_POOL = "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca" as `0x${string}`;
 
+/** The ATOMIC token (relaunched 2026-10-12). The router reads the same address for the holder fee waiver. */
+export const ATOMIC_TOKEN = "0x6564046886d119DF6360127B09d31af3836950dd" as const;
 export const EXPLORER = "https://robinhoodchain.blockscout.com";

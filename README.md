@@ -12,7 +12,7 @@ ATOMIC is the execution layer for stock tokens on Robinhood Chain (chain id 4663
 | Site | https://useatomic.xyz |
 | X | https://x.com/useatomic_xyz |
 | Router v1.2 | [`0x82eec2769274eEc9F0BB9063F5B8a9908F3e389b`](https://sourcify.dev/#/lookup/0x82eec2769274eEc9F0BB9063F5B8a9908F3e389b) |
-| Token | `0x658DC84c90A7286480Bb16d009Aa34606345f5fB` |
+| Token | `0x6564046886d119DF6360127B09d31af3836950dd` |
 
 ## Contents
 
@@ -201,7 +201,7 @@ Robinhood Chain, chain id 4663.
 | AtomicArb v1 (superseded) | `0xfc36D801680Ca99f4ebE020Ab9967f3249e87A48` |
 | AtomicRouter v1.1 (superseded) | `0xC7056Fe38081b9359997FBCBf94591e2Cf7E34d9` |
 | AtomicRouter v1.0 (superseded) | `0x7D0E0827a8Bbc5a2CD78e5B12226c65cB449a9Ec` |
-| ATOMIC token | `0x658DC84c90A7286480Bb16d009Aa34606345f5fB` |
+| ATOMIC token | `0x6564046886d119DF6360127B09d31af3836950dd` |
 | Morpho | `0x9D53d5E3bd5E8d4Cbfa6DB1ca238AEA02E651010` |
 | Uniswap v3 SwapRouter02 | `0xCaf681a66D020601342297493863E78C959E5cb2` |
 | Uniswap v3 QuoterV2 | `0x33e885ed0ec9bf04ecfb19341582aadcb4c8a9e7` |

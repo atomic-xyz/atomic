@@ -1,6 +1,7 @@
 import { Nav } from "@/components/landing/Nav";
 import { Hero } from "@/components/landing/Hero";
 import { TickerStrip } from "@/components/landing/TickerStrip";
+import { TokenBar } from "@/components/landing/TokenBar";
 import { Thesis } from "@/components/landing/Thesis";
 import { Compare } from "@/components/landing/Compare";
 import { Actions } from "@/components/landing/Actions";
@@ -19,6 +20,7 @@ export default function Home() {
         <Nav />
         <Hero />
         <TickerStrip />
+        <TokenBar />
         <Thesis />
         <Compare />
         <Actions />

@@ -160,7 +160,8 @@ for (let i = 0; i < candidates.length; i += 20) {
   chunk.forEach((m, j) => {
     const r = res[j].result; if (!r) return;
     const supply = Number(r[0]) / 1e6, borrow = Number(r[2]) / 1e6;
-    if (supply < 1000) return;
+    // tiny pools are noise, except the high-LLTV ones: they are the only way above 2.28x, so keep them even while empty
+    if (supply < 1000 && Number(m.lltv) / 1e18 <= 0.625) return;
     markets.push({ id: m.id, symbol: stockByAddr.get(m.collateralToken.toLowerCase()).symbol, collateral: m.collateralToken.toLowerCase(), oracle: m.oracle, irm: m.irm, lltv: Number(m.lltv) / 1e18, supplyUSDG: Math.round(supply), borrowUSDG: Math.round(borrow) });
   });
   await sleep(700);

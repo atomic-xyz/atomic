@@ -8,6 +8,14 @@ import {IERC20} from "../src/interfaces/ISwapRouter02.sol";
 
 /// @notice Fork tests against Robinhood Chain mainnet: real Morpho markets, real Uniswap pools.
 ///         forge test --fork-url $RPC_URL -vv
+interface IMorphoSupply {
+    function supply(MarketParams calldata marketParams, uint256 assets, uint256 shares, address onBehalf, bytes calldata data) external returns (uint256, uint256);
+}
+
+interface IOracle {
+    function price() external view returns (uint256);
+}
+
 contract AtomicRouterForkTest is Test {
     using MarketParamsLib for MarketParams;
 
@@ -19,6 +27,7 @@ contract AtomicRouterForkTest is Test {
     address constant GOOGL = 0x2e0847E8910a9732eB3fb1bb4b70a580ADAD4FE3;
     bytes32 constant NVDA_MARKET = 0x8b16891f032a93b771347c9cb470a780e6699dd701553d3402aa3cdba6189c3e;
     bytes32 constant AAPL_MARKET = 0xdeb4782d012d5fd3b24962538c2f6559049d70bda4dabd2e4212dacb96c28d45;
+    bytes32 constant AAPL_77_MARKET = 0xe3813a231ef3c073d21615ab0a8788ebfae23e95e7e5571880c7619d5b05f404; // 77% LLTV, empty on mainnet so tests fund it
     bytes32 constant GOOGL_MARKET = 0x7fa81b10e5d21b2e4c571f862442bc11aff2ed14f02335868d0ff933fd40d0ba; // AAPL's market ran dry in Oct 2026, rotations target GOOGL
 
     IMorpho morpho = IMorpho(MORPHO);
@@ -84,6 +93,45 @@ contract AtomicRouterForkTest is Test {
         assertEq(IERC20(NVDA).balanceOf(address(router)), 0, "router holds no NVDA");
         // ~2x: collateral value should be near 2 * deposit. Oracle price is ~$223 so 2000 USDG ~ 8.9 NVDA.
         assertGt(collateral, 8e18, "about 2x exposure");
+    }
+
+    /// A lender funds the 77% AAPL pool, then 3.26x opens there and sits under the liquidation line.
+    function test_openLeverage_3x_on77Pool() public {
+        MarketParams memory aapl77 = _params(AAPL_77_MARKET);
+        assertEq(aapl77.collateralToken, AAPL, "aapl 77 market");
+        assertEq(aapl77.lltv, 0.77e18, "77% lltv");
+
+        address lender = makeAddr("lender");
+        vm.prank(MORPHO);
+        IERC20(USDG).transfer(lender, 100_000e6);
+        vm.startPrank(lender);
+        IERC20(USDG).approve(MORPHO, type(uint256).max);
+        IMorphoSupply(MORPHO).supply(aapl77, 100_000e6, 0, lender, "");
+        vm.stopPrank();
+
+        uint256 deposit = 1_000e6;
+        uint256 flash = 2_260e6; // 3.26x
+        vm.prank(user);
+        router.openLeverage(aapl77, deposit, flash, _path(USDG, 500, AAPL), 0);
+
+        (, uint128 borrowShares, uint128 collateral) = morpho.position(AAPL_77_MARKET, user);
+        uint256 debt = router.debtAssets(aapl77, user);
+        uint256 value = (uint256(collateral) * IOracle(aapl77.oracle).price()) / 1e36; // USDG, 6 decimals
+        console.log("collateral AAPL (1e18):", collateral);
+        console.log("debt USDG (1e6):", debt);
+        console.log("collateral value USDG (1e6):", value);
+        assertGt(borrowShares, 0, "debt opened");
+        assertApproxEqRel(value, deposit + flash, 0.02e18, "about 3.26x exposure");
+        assertLt(debt * 100, value * 77, "under the 77% liquidation line");
+        assertGt(debt * 100, value * 62, "which the 62.5% pool could never hold");
+        assertEq(IERC20(USDG).balanceOf(address(router)), 0, "router holds no USDG");
+    }
+
+    /// The same 3.26x is refused by the 62.5% pool: Morpho rejects the borrow as under-collateralized.
+    function test_openLeverage_3x_rejectedOn62Pool() public {
+        vm.prank(user);
+        vm.expectRevert();
+        router.openLeverage(aapl, 1_000e6, 2_260e6, _path(USDG, 500, AAPL), 0);
     }
 
     function test_closePosition_returnsUsdg() public {

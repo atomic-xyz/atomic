@@ -1,5 +1,6 @@
 "use client";
 
+import { SAFETY } from "@/lib/data";
 import { useMemo, useState } from "react";
 import { erc20Abi, formatUnits, parseUnits, type Address } from "viem";
 import { useAccount, useWriteContract } from "wagmi";
@@ -12,7 +13,6 @@ import { marketParams, morphoAbi } from "@/lib/router";
 import { ExecuteFlow, type FlowStep } from "./ExecuteFlow";
 import { StepTitle } from "./LeveragePanel";
 
-const SAFETY = 0.9; // never borrow above 90% of the liquidation threshold
 
 // How much of the collateral's value to borrow. The last one resolves to 90% of the market's limit.
 const MODES = [

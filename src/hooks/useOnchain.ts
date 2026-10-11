@@ -3,7 +3,7 @@
 import { erc20Abi, type Address, type Hex } from "viem";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { ADDR } from "@/lib/addresses";
-import { PRIMARY_MARKETS, type Market } from "@/lib/data";
+import { COLLATERAL_MARKETS, PRIMARY_MARKETS, type Market } from "@/lib/data";
 import { morphoAbi, ROUTER_ABI, ROUTER_ADDRESS, sharesToAssetsUp } from "@/lib/router";
 
 const MORPHO = ADDR.MORPHO as Address;
@@ -119,13 +119,13 @@ export interface StockHolding {
 export function useStockHoldings() {
   const { address } = useAccount();
   const contracts = address
-    ? PRIMARY_MARKETS.flatMap((m) => [
+    ? COLLATERAL_MARKETS.flatMap((m) => [
         { address: m.collateral as Address, abi: erc20Abi, functionName: "balanceOf" as const, args: [address] as const },
         { address: m.collateral as Address, abi: erc20Abi, functionName: "allowance" as const, args: [address, MORPHO] as const },
       ])
     : [];
   const q = useReadContracts({ contracts, query: { enabled: !!address, refetchInterval: 8_000 } });
-  const holdings: StockHolding[] = PRIMARY_MARKETS.map((m, i) => ({
+  const holdings: StockHolding[] = COLLATERAL_MARKETS.map((m, i) => ({
     market: m,
     balance: (q.data?.[i * 2]?.result as bigint | undefined) ?? 0n,
     allowance: (q.data?.[i * 2 + 1]?.result as bigint | undefined) ?? 0n,

@@ -7,7 +7,7 @@ import { useAccount, useWriteContract } from "wagmi";
 import { useQuote, useSnapshot } from "@/hooks/useSnapshot";
 import { useHolderStatus, usePositions, useRouterAuthorized, useUsdgAllowance, useUsdgBalance } from "@/hooks/useOnchain";
 import { ADDR } from "@/lib/addresses";
-import { stockBySymbol, STOCKS } from "@/lib/data";
+import { idleOf, maxLeverageFor, pickMarket, stockBySymbol, STOCKS } from "@/lib/data";
 import { saveEntry } from "@/lib/entries";
 import { fmtNum, fmtPct, fmtUsd, planLeverage } from "@/lib/math";
 import { marketParams, morphoAbi, ROUTER_ABI, ROUTER_ADDRESS, routeToPath, withSlippage } from "@/lib/router";
@@ -15,8 +15,6 @@ import { Ticker } from "@/components/ui/primitives";
 import { StepList } from "./shared";
 import { ExecuteFlow, type FlowStep } from "./ExecuteFlow";
 import { PositionChart } from "./PositionChart";
-
-const SAFETY = 0.9; // never open above 90% of the liquidation threshold
 
 const MODES = [
   { key: "careful", label: "Careful", mult: 1.5, blurb: "a little leverage, lots of room" },
@@ -44,15 +42,21 @@ export function LeveragePanel() {
   const [showDetails, setShowDetails] = useState(false);
   const symbol = symbols.length && !symbols.includes(picked) ? symbols[0] : picked;
 
-  // the deepest market for the picked symbol
-  const market = useMemo(() => markets.filter((m) => m.symbol === symbol).sort((a, b) => b.supplyUSDG - b.borrowUSDG - (a.supplyUSDG - a.borrowUSDG))[0], [markets, symbol]);
+  // every pool for the picked symbol; a stock can have a 62.5% pool and a 77% pool side by side
+  const candidates = useMemo(() => markets.filter((m) => m.symbol === symbol && m.oraclePrice > 0), [markets, symbol]);
   const stock = stockBySymbol(symbol);
   const feed = data?.feeds[symbol]?.price ?? 0;
-  const lltv = market?.lltv ?? 0.625;
-  const maxLev = Math.floor((1 / (1 - lltv * SAFETY)) * 100) / 100;
+  // the most any pool with USDG to lend allows today (the empty ones do not raise the ceiling)
+  const ceilingPools = candidates.some((m) => idleOf(m) >= 100) ? candidates.filter((m) => idleOf(m) >= 100) : candidates;
+  const maxLev = ceilingPools.length ? Math.max(...ceilingPools.map((m) => maxLeverageFor(m.lltv))) : maxLeverageFor(0.625);
+  const maxLltv = ceilingPools.length ? Math.max(...ceilingPools.map((m) => m.lltv)) : 0.625;
   const dep = Math.max(0, parseFloat(deposit) || 0);
   const lev = Math.min(leverage, maxLev);
   const exposure = dep * lev;
+  // the pool for this leverage: highest LLTV that allows it and can lend the debt
+  const marketFor = (l: number) => pickMarket(candidates, l, dep * (l - 1) * 1.001);
+  const market = useMemo(() => marketFor(lev), [candidates, lev, dep]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lltv = market?.lltv ?? 0.625;
   const balance = useUsdgBalance();
   const walletUsdg = balance.data !== undefined ? Number(balance.data) / 1e6 : null;
 
@@ -70,8 +74,10 @@ export function LeveragePanel() {
   const dropToLiq = oraclePrice > 0 && plan.liqPrice > 0 ? 1 - plan.liqPrice / oraclePrice : 0;
   const route = quote.data?.best;
   const routeLabel = route ? (route.kind === "single" ? `Uniswap v3 ${(route.fees[0] / 10000).toFixed(2)}%` : `${route.kind === "viaWETH" ? "via WETH" : "via USDG"} ${route.fees.map((f) => (f / 10000).toFixed(2) + "%").join(" / ")}`) : null;
-  const idle = market ? Math.max(0, market.supplyUSDG - market.borrowUSDG) : 0;
+  const idle = market ? idleOf(market) : 0;
   const marketDepthOk = market ? plan.debt <= idle : false;
+  // when this pool cannot lend the debt: the most this deposit can still open somewhere today
+  const affordableMax = dep > 0 ? Math.max(1, ...candidates.map((m) => Math.min(maxLeverageFor(m.lltv), Math.floor((1 + idleOf(m) / (dep * 1.001)) * 100) / 100))) : 1;
   const enoughBalance = walletUsdg === null || walletUsdg >= dep;
 
   const modeFor = (mult: number) => (mult === Infinity ? maxLev : Math.min(mult, maxLev));
@@ -80,7 +86,7 @@ export function LeveragePanel() {
   // one sentence per mode, with this deposit and this stock
   const modeMath = (mult: number) => {
     const l = modeFor(mult);
-    const p = planLeverage(dep, l, lltv, oraclePrice, oraclePrice);
+    const p = planLeverage(dep, l, marketFor(l)?.lltv ?? lltv, oraclePrice, oraclePrice);
     const drop = oraclePrice > 0 && p.liqPrice > 0 ? 1 - p.liqPrice / oraclePrice : 1;
     return { l, control: dep * l, up10: dep * l * 0.1, drop };
   };
@@ -223,7 +229,7 @@ export function LeveragePanel() {
             steps={txSteps}
             label={`Buy ${symbol} with ${lev.toFixed(1)}x leverage`}
             ready={ready}
-            blocker={!enoughBalance ? `Your wallet has ${fmtUsd(walletUsdg ?? 0)} USDG` : dep > 0 && !marketDepthOk ? "Not enough USDG left to borrow in this market" : dep > 0 && !route && !quote.isFetching ? "No route for this size" : undefined}
+            blocker={!enoughBalance ? `Your wallet has ${fmtUsd(walletUsdg ?? 0)} USDG` : dep > 0 && !marketDepthOk ? (affordableMax > 1.01 ? `The ${fmtPct(lltv, 1)} ${symbol} pool has ${fmtUsd(idle, 0)} left to lend. Up to ${affordableMax.toFixed(2)}x is open for this deposit today` : "Not enough USDG left to borrow in this market") : dep > 0 && !route && !quote.isFetching ? "No route for this size" : undefined}
             onDone={() => {
               if (address && market) saveEntry(address, { marketId: market.id, symbol, price: execPrice, deposit: dep, tokens: plan.tokens, debt: plan.debt, at: Date.now() });
               positions.refetch();
@@ -246,11 +252,11 @@ export function LeveragePanel() {
                 <div>
                   <div className="mb-2 flex items-center justify-between font-mono text-[11px] text-muted-2">
                     <span>fine tune the leverage</span>
-                    <span>1x means no borrowing, {maxLev.toFixed(2)}x is the most this market allows today</span>
+                    <span>1x means no borrowing, {maxLev.toFixed(2)}x is the most {symbol} allows today</span>
                   </div>
                   <input type="range" min={1} max={maxLev} step={0.01} value={lev} onChange={(e) => setLeverage(parseFloat(e.target.value))} style={{ ["--pct" as string]: `${((lev - 1) / (maxLev - 1)) * 100}%` }} />
                   <p className="mt-2 text-[11px] leading-relaxed text-muted-2">
-                    Why {maxLev.toFixed(2)}x: Morpho lets a {symbol} position borrow up to {fmtPct(lltv, 1)} of what the stock is worth. Going all the way would sit right at the liquidation line, so ATOMIC stops at 90% of it.
+                    Why {maxLev.toFixed(2)}x: the best {symbol} pool lets a position borrow up to {fmtPct(maxLltv, 1)} of what the stock is worth. Going all the way would sit right at the liquidation line, so ATOMIC stops at 90% of it.{maxLltv > 0.7 ? <> Above {maxLeverageFor(0.625).toFixed(2)}x your position sits in the {fmtPct(maxLltv, 0)} pool.</> : null}
                   </p>
                 </div>
 

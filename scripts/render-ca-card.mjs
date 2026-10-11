@@ -39,7 +39,7 @@ body{margin:0;width:1200px;height:675px;background:#050505;color:#f2f2f2;font-fa
 <div class="big">Token is live</div>
 <div class="ca"><span class="l">CA</span>${ca}</div>
 <div class="perk">Hold <b>100,000 ATOMIC</b> and the router fee is <b>zero</b></div>
-<div class="perk perk2"><b>${burned}%</b> of supply burned</div>
+${Number(burned) > 0 ? `<div class="perk perk2"><b>${burned}%</b> of supply burned</div>` : ""}
 <div class="foot">BUY ON <i>PONSFAMILY.COM</i> · USE IT ON <i>USEATOMIC.XYZ</i></div>
 </body></html>`;
 

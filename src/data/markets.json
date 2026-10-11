@@ -76,7 +76,7 @@
     "oracle": "0xfF1D77a191A338674Ccf17aF48f7F9384587E457",
     "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
     "lltv": 0.77,
-    "supplyUSDG": 0,
+    "supplyUSDG": 372,
     "borrowUSDG": 0
   },
   {
@@ -116,6 +116,26 @@
     "oracle": "0xC5b5E605BF6c8A1371e0Cb0e348A0dFDE9e0c889",
     "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
     "lltv": 0.86,
+    "supplyUSDG": 0,
+    "borrowUSDG": 0
+  },
+  {
+    "id": "0xc95ee21e79aa9e8dea6cb8ede0bf4deac87bbf6bebaae5356abbd21bbae1b64b",
+    "symbol": "NVDA",
+    "collateral": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
+    "oracle": "0xED29D310cfa91778A5850538DA28ed42234Cb78c",
+    "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+    "lltv": 0.77,
+    "supplyUSDG": 0,
+    "borrowUSDG": 0
+  },
+  {
+    "id": "0x52260494815abb0ca17ab82d33133c270487ce50937c7e0bac309f051db75cdc",
+    "symbol": "SPCX",
+    "collateral": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+    "oracle": "0x872F9D8955B34e841227a92dE755cd63042Ab7A5",
+    "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+    "lltv": 0.77,
     "supplyUSDG": 0,
     "borrowUSDG": 0
   }

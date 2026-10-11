@@ -80,7 +80,6 @@ A Next.js application at [useatomic.xyz/app](https://useatomic.xyz/app). Every n
 | Tab | What it is for |
 | --- | --- |
 | **Perpetual** | Three questions (which stock, how much, how bold), a one-sentence summary and one button. A details section holds the what-if table, the equity chart, slippage and the step trace |
-| **Borrow** | Put up stock tokens you already hold and borrow USDG against them, without selling. Direct Morpho calls from your wallet, no ATOMIC fee |
 | **Arbitrage** | Every stock that trades in two or more pools across Uniswap v3, Uniswap v4, Ramses, giga, Up and Alandale, the gap between the cheapest and dearest pool, and the fees. Each gap that pays on paper is simulated as the real trade, at several sizes, and the button appears only when one of them makes money |
 | **Borrowers** | Every open loan on the stock markets: what each wallet holds and owes, live profit since entry, leverage and distance to liquidation |
 | **Holders** | Status of the connected wallet, the full gap list, a liquidation watch and browser alerts, for wallets that hold ATOMIC |

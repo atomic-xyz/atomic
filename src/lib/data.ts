@@ -32,9 +32,6 @@ export const PRIMARY_MARKETS: Market[] = Object.values(
   }, {}),
 ).sort((a, b) => b.supplyUSDG - a.supplyUSDG);
 
-/** One market per collateral token, for balance and allowance reads. */
-export const COLLATERAL_MARKETS: Market[] = PRIMARY_MARKETS.filter((m, i, all) => all.findIndex((x) => x.collateral === m.collateral) === i);
-
 /** Never open above 90% of the liquidation threshold. */
 export const SAFETY = 0.9;
 /** The highest leverage a market allows: 1 / (1 - lltv * SAFETY), floored to two decimals. 62.5% gives 2.28x, 77% gives 3.26x. */

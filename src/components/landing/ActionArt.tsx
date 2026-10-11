@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 
-/** Leverage: bars climb from 1x to 2.5x while a lime bar shows borrowed exposure. */
+/** Leverage: bars climb from 1x to 3.3x while a lime bar shows borrowed exposure. */
 export function LeverageArt() {
   const bars = [1, 1.5, 2, 2.5];
   return (

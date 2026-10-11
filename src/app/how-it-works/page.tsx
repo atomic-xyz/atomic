@@ -10,7 +10,7 @@ export default function HowPage() {
     <PageShell>
       <PageHero
         eyebrow="How it works"
-        title="Borrow, swap, repay,"
+        title="Flash, buy, lock, settle,"
         accent="inside one block"
         lede="ATOMIC holds no deposits and runs no pool. It borrows liquidity that already exists on Morpho and Uniswap, uses it for the length of one transaction and hands it back. This page walks the trace, the routing, the contracts and the questions people ask before signing."
         watermark="tx"

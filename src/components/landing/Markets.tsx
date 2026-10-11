@@ -3,14 +3,23 @@
 import Link from "next/link";
 import { Eyebrow, Pill, Reveal, Ticker } from "@/components/ui/primitives";
 import { useSnapshot } from "@/hooks/useSnapshot";
-import { dexLabel, stockBySymbol } from "@/lib/data";
+import { dexLabel, idleOf, maxLeverageFor, stockBySymbol } from "@/lib/data";
 import { EXPLORER } from "@/lib/addresses";
 import { fmtPct, fmtUsd } from "@/lib/math";
 import { SpreadBoard } from "./SpreadBoard";
 
 export function Markets() {
   const { data, isLoading } = useSnapshot();
-  const markets = data?.markets ?? [];
+  // one row per stock: the funded pool with the highest LLTV (that is what the app opens in), totals across its pools
+  const rows = Object.values(
+    (data?.markets ?? []).reduce<Record<string, { best: NonNullable<typeof data>["markets"][number]; supply: number; borrow: number; pools: number }>>((acc, m) => {
+      const r = acc[m.symbol];
+      const funded = idleOf(m) >= 100;
+      const better = !r || (funded && (idleOf(r.best) < 100 || m.lltv > r.best.lltv)) || (!funded && idleOf(r.best) < 100 && m.supplyUSDG > r.best.supplyUSDG);
+      acc[m.symbol] = { best: better ? m : r?.best ?? m, supply: (r?.supply ?? 0) + m.supplyUSDG, borrow: (r?.borrow ?? 0) + m.borrowUSDG, pools: (r?.pools ?? 0) + 1 };
+      return acc;
+    }, {}),
+  ).sort((a, b) => b.supply - a.supply);
   const venuesBySymbol = (sym: string) => (data?.venues ?? []).filter((v) => v.symbol === sym);
 
   return (
@@ -42,13 +51,40 @@ export function Markets() {
       </div>
 
       <Reveal delay={0.1} className="mt-12 overflow-hidden rounded-3xl border border-line">
-        <div className="overflow-x-auto scrollbar-thin">
+        {/* phones: one card per stock instead of a sideways table */}
+        <div className="divide-y divide-line md:hidden">
+          {isLoading && !data
+            ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="p-5"><span className="skeleton block h-12 w-full" /></div>)
+            : rows.map(({ best: m, supply, borrow, pools }) => (
+                <div key={m.id} className="p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <Ticker symbol={m.symbol} />
+                      <div>
+                        <div className="font-medium">{m.symbol}</div>
+                        <div className="text-xs text-muted">{stockBySymbol(m.symbol)?.name}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono text-flash">{maxLeverageFor(m.lltv).toFixed(2)}x</div>
+                      <div className="font-mono text-[11px] text-muted-2">{fmtPct(m.lltv, 1)} LLTV</div>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-3 font-mono text-[12px]">
+                    <div><div className="text-[10px] uppercase tracking-[0.14em] text-muted-2">Price</div><div className="mt-1">{fmtUsd(m.oraclePrice)}</div></div>
+                    <div><div className="text-[10px] uppercase tracking-[0.14em] text-muted-2">Supplied</div><div className="mt-1">{fmtUsd(supply)}</div><div className="text-[10px] text-muted-2">{fmtPct(supply > 0 ? borrow / supply : 0, 0)} used{pools > 1 ? ` · ${pools} pools` : ""}</div></div>
+                    <div><div className="text-[10px] uppercase tracking-[0.14em] text-muted-2">Borrow APY</div><div className="mt-1">{fmtPct(m.borrowApy)}</div></div>
+                  </div>
+                </div>
+              ))}
+        </div>
+        <div className="hidden overflow-x-auto scrollbar-thin md:block">
           <table className="w-full min-w-[840px] text-sm">
             <thead className="bg-bg-2/80 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-2">
               <tr>
                 <th className="px-5 py-4 text-left font-normal">Collateral</th>
                 <th className="px-5 py-4 text-right font-normal">Oracle price</th>
-                <th className="px-5 py-4 text-right font-normal">Max LTV</th>
+                <th className="px-5 py-4 text-right font-normal">Pool LLTV</th>
                 <th className="px-5 py-4 text-right font-normal">Max leverage</th>
                 <th className="px-5 py-4 text-right font-normal">USDG supplied</th>
                 <th className="px-5 py-4 text-right font-normal">Borrow APY</th>
@@ -64,7 +100,7 @@ export function Markets() {
                       ))}
                     </tr>
                   ))
-                : markets.map((m) => {
+                : rows.map(({ best: m, supply, borrow, pools }) => {
                     const stock = stockBySymbol(m.symbol);
                     const venues = venuesBySymbol(m.symbol);
                     return (
@@ -80,8 +116,8 @@ export function Markets() {
                         </td>
                         <td className="px-5 py-4 text-right font-mono">{fmtUsd(m.oraclePrice)}</td>
                         <td className="px-5 py-4 text-right font-mono">{fmtPct(m.lltv, 1)}</td>
-                        <td className="px-5 py-4 text-right font-mono text-flash">{(1 / (1 - m.lltv)).toFixed(2)}x</td>
-                        <td className="px-5 py-4 text-right font-mono">{fmtUsd(m.supplyUSDG)}<div className="text-[11px] text-muted-2">{fmtPct(m.utilization, 0)} used</div></td>
+                        <td className="px-5 py-4 text-right font-mono text-flash">{maxLeverageFor(m.lltv).toFixed(2)}x</td>
+                        <td className="px-5 py-4 text-right font-mono">{fmtUsd(supply)}<div className="text-[11px] text-muted-2">{fmtPct(supply > 0 ? borrow / supply : 0, 0)} used{pools > 1 ? ` · ${pools} pools` : ""}</div></td>
                         <td className="px-5 py-4 text-right font-mono">{fmtPct(m.borrowApy)}</td>
                         <td className="px-5 py-4">
                           <div className="flex flex-wrap gap-1.5">
@@ -97,7 +133,7 @@ export function Markets() {
           </table>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-bg-2/60 px-5 py-3 font-mono text-[11px] text-muted">
-          <span>Morpho markets with live USDG supply and a stock token as collateral. Rates read from the AdaptiveCurve IRM every 10 seconds.</span>
+          <span>One row per stock: the pool the app opens in today, totals across its pools. Max leverage stops at 90% of the liquidation line. Rates read every 10 seconds.</span>
           <a href={`${EXPLORER}/address/0x9D53d5E3bd5E8d4Cbfa6DB1ca238AEA02E651010`} target="_blank" rel="noreferrer" className="hover:text-text">Morpho on Blockscout</a>
         </div>
       </Reveal>

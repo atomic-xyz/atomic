@@ -16,15 +16,15 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   title: "ATOMIC",
   description:
-    "Borrow, swap, repay in one transaction. The execution layer for stock tokens on Robinhood Chain: leverage, collateral rotation and zero-capital arbitrage, settled inside a single block.",
+    "Perpetual leverage on tokenized stocks, up to 3.26x, no expiry. One transaction to open, one to close, settled inside a single block on Robinhood Chain.",
   openGraph: {
     title: "ATOMIC",
-    description: "Borrow, swap, repay in one transaction. Execution layer for stock tokens on Robinhood Chain",
+    description: "Perpetual leverage on tokenized stocks, up to 3.26x, no expiry. One transaction to open, one to close",
     type: "website",
     url: SITE_URL,
     siteName: "ATOMIC",
   },
-  twitter: { card: "summary_large_image", site: "@useatomic_xyz", creator: "@useatomic_xyz", title: "ATOMIC", description: "Borrow, swap, repay in one transaction" },
+  twitter: { card: "summary_large_image", site: "@useatomic_xyz", creator: "@useatomic_xyz", title: "ATOMIC", description: "Perpetual leverage on tokenized stocks, no expiry, one transaction" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

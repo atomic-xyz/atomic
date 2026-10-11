@@ -9,8 +9,8 @@ const ACTIONS = [
   {
     key: "leverage",
     title: "Perpetual",
-    tagline: "Long a stock 2x to 2.6x with one deposit",
-    body: "Deposit USDG, pick a multiple. ATOMIC flash-borrows the rest, buys the stock on Uniswap, posts it to Morpho, borrows against it and repays the flash loan. No loops, no five-tab dance.",
+    tagline: "Long a stock up to 3.26x with one deposit",
+    body: "Deposit USDG, pick a multiple, hold it with no expiry. ATOMIC flash-borrows the rest, buys the stock on Uniswap, posts it to Morpho, borrows against it and repays the flash loan. No loops, no five-tab dance.",
     steps: ["Flash USDG", "Buy stock", "Supply", "Borrow", "Repay"],
     tone: "flash" as const,
     Art: LeverageArt,

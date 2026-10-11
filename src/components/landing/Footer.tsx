@@ -29,7 +29,7 @@ export function Footer() {
         <div className="mt-14 grid gap-10 border-t border-line pt-10 md:grid-cols-[1.2fr_1fr_1fr_1fr]">
           <div>
             <Logo />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">Execution layer for stock tokens on Robinhood Chain. Borrow, swap, repay in one transaction.</p>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">Perpetual leverage on tokenized stocks. One transaction to open, one to close, no expiry.</p>
           </div>
           <div className="text-sm">
             <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-2">Product</div>

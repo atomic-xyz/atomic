@@ -48,17 +48,17 @@ export function Hero() {
           </motion.div>
 
           <h1 className="hero-h1 mt-7 text-[44px] leading-[0.95] tracking-[-0.035em] sm:text-[56px] md:text-[64px] lg:text-[76px]">
-            <SplitWords text="Borrow, swap, repay" delay={0.1} />
+            <SplitWords text="Leverage stocks," delay={0.1} />
             <br />
             <span className="font-display text-gradient">
               <SplitWords text="one transaction," delay={0.35} />
             </span>
             <br />
-            <SplitWords text="zero capital" delay={0.55} className="text-sheen" />
+            <SplitWords text="no expiry" delay={0.55} className="text-sheen" />
           </h1>
 
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.8, ease }} className="mt-8 max-w-xl text-lg leading-relaxed text-muted">
-            Leverage NVDA, rotate into AAPL or arb the weekend gap. ATOMIC composes flash liquidity from Morpho and Uniswap into a single block on Robinhood Chain. If any step fails, nothing happened.
+            One deposit, one signature, up to 3.26x on a tokenized stock. Hold it with no expiry and no funding, close it in one transaction. ATOMIC composes flash liquidity from Morpho and Uniswap into a single block on Robinhood Chain. If any step fails, nothing happened.
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.95, ease }} className="mt-9 flex flex-wrap items-center gap-3">

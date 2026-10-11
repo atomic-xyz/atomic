@@ -13,7 +13,7 @@ export const LEVERAGE_STEPS: TxStep[] = [
   { label: "Repay", venue: "Morpho", detail: "flash loan closed" },
 ];
 
-export function TxVisualizer({ steps = LEVERAGE_STEPS, title = "Leverage NVDA 2.5x", loop = true, compact = false }: { steps?: TxStep[]; title?: string; loop?: boolean; compact?: boolean }) {
+export function TxVisualizer({ steps = LEVERAGE_STEPS, title = "Leverage NVDA 2x", loop = true, compact = false }: { steps?: TxStep[]; title?: string; loop?: boolean; compact?: boolean }) {
   const [active, setActive] = useState(-1);
   const [settled, setSettled] = useState(false);
   const period = 900;

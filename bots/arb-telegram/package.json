@@ -1,0 +1,16 @@
+{
+  "name": "atomic-arb-telegram",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Private Telegram bot that watches the stock pools for arbitrage that survives a real simulation",
+  "scripts": {
+    "start": "node bot.mjs"
+  },
+  "dependencies": {
+    "viem": "^2.47.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

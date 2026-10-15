@@ -60,11 +60,14 @@ export interface Opp {
 
 export const feeOf = (v: VenuePrice) => (v.fee ?? 3000) / 1_000_000;
 
+/** Pools below this TVL quote prices nobody can trade at; they are left out of every gap. */
+export const MIN_ARB_TVL = 25_000;
+
 /** One row per stock: the cheapest and dearest pool it trades in right now, and whether the gap pays for itself. */
 export function buildOpps(data: Snapshot | undefined): Opp[] {
   if (!data) return [];
   const bySym = new Map<string, VenuePrice[]>();
-  for (const v of data.venues) bySym.set(v.symbol, [...(bySym.get(v.symbol) ?? []), v]);
+  for (const v of data.venues) if (v.tvl >= MIN_ARB_TVL) bySym.set(v.symbol, [...(bySym.get(v.symbol) ?? []), v]);
   const out: Opp[] = [];
   for (const [symbol, venues] of bySym) {
     const feed = data.feeds[symbol]?.price ?? 0;

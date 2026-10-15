@@ -4,11 +4,12 @@ import { motion } from "framer-motion";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { dexLabel } from "@/lib/data";
 import { fmtPct, fmtUsd } from "@/lib/math";
+import { MIN_ARB_TVL } from "@/lib/arb";
 
 /** Every venue as a heat cell: green above Chainlink, red below, brighter the further away. */
 export function SpreadBoard() {
   const { data } = useSnapshot();
-  const venues = (data?.venues ?? []).slice().sort((a, b) => Math.abs(b.deviation) - Math.abs(a.deviation)).slice(0, 20);
+  const venues = (data?.venues ?? []).filter((v) => v.tvl >= MIN_ARB_TVL).sort((a, b) => Math.abs(b.deviation) - Math.abs(a.deviation)).slice(0, 20);
 
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">

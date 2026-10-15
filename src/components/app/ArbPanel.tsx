@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Address } from "viem";
 import { useQuery } from "@tanstack/react-query";
@@ -46,6 +46,10 @@ export function ArbPanel() {
   const now = useNow();
   const [size, setSize] = useState("5000");
   const [showWatching, setShowWatching] = useState(false);
+  const [showRejected, setShowRejected] = useState(false);
+  // what each pair's simulation concluded, reported by the cards
+  const [verdicts, setVerdicts] = useState<Record<string, Verdict>>({});
+  const onVerdict = (symbol: string, v: Verdict) => setVerdicts((prev) => (prev[symbol]?.status === v.status && prev[symbol]?.note === v.note ? prev : { ...prev, [symbol]: v }));
 
   const opps = useMemo<Opp[]>(() => buildOpps(data), [data]);
 
@@ -54,6 +58,9 @@ export function ArbPanel() {
   const watching = opps.filter((o) => o.venues.length === 1);
   const ready = pairs.filter((o) => o.net > 0 && o.executable);
   const blocked = pairs.filter((o) => o.net > 0 && !o.executable); // profitable, but one side is a pool the contract cannot trade
+  const wins = pairs.filter((o) => verdicts[o.symbol]?.status === "win");
+  const pending = pairs.filter((o) => o.executable && o.net > 0 && (!verdicts[o.symbol] || verdicts[o.symbol].status === "pending"));
+  const rejected = pairs.filter((o) => verdicts[o.symbol]?.status === "fail" || !(o.executable && o.net > 0));
 
   return (
     <div className="grid gap-5">
@@ -76,7 +83,7 @@ export function ArbPanel() {
 
       <div className="grid gap-4 md:grid-cols-3">
         {[
-          { l: "Gaps that pay on paper", v: data ? String(ready.length) : "-", s: "each one is simulated below" },
+          { l: "Gaps that pay by simulation", v: data ? String(wins.length) : "-", s: `${ready.length} quoted, each one run as a real trade` },
           { l: "Stocks with two or more pools", v: data ? String(pairs.length) : "-", s: "compared every 10 seconds" },
           { l: "Pools watched", v: data ? String(data.venues.length) : "-", s: "Uniswap v3 and v4, Ramses, giga" },
         ].map((c) => (
@@ -90,11 +97,21 @@ export function ArbPanel() {
 
       <div>
         {data && (
-          <div className={`mb-4 rounded-2xl border px-5 py-4 ${ready.length > 0 ? "border-up/40 bg-up/10" : "border-line bg-surface"}`}>
-            {ready.length > 0 ? (
+          <div className={`mb-4 rounded-2xl border px-5 py-4 ${wins.length > 0 ? "border-up/40 bg-up/10" : "border-line bg-surface"}`}>
+            {wins.length > 0 ? (
               <div className="text-[15px] text-text">
-                <b className="text-up">{ready.length} {ready.length === 1 ? "gap pays" : "gaps pay"} on paper: {ready.map((o) => o.symbol).join(", ")}.</b>{" "}
-                <span className="text-muted">Each card runs the real trade as a simulation first. A <b className="text-text">Take it</b> button appears only when the simulation makes money.</span>
+                <b className="text-up">{wins.length} {wins.length === 1 ? "gap pays" : "gaps pay"} by simulation: {wins.map((o) => o.symbol).join(", ")}.</b>{" "}
+                <span className="text-muted">The card below ran the real trade as a simulation and it made money. <b className="text-text">Take it</b> sends that exact trade.</span>
+              </div>
+            ) : pending.length > 0 ? (
+              <div className="text-[15px] text-text">
+                <b>Simulating {pending.length} quoted {pending.length === 1 ? "gap" : "gaps"}: {pending.map((o) => o.symbol).join(", ")}.</b>{" "}
+                <span className="text-muted">A card appears only if the real trade makes money.</span>
+              </div>
+            ) : ready.length > 0 ? (
+              <div className="text-[15px] leading-relaxed text-text">
+                <b>Nothing pays right now.</b>{" "}
+                <span className="text-muted">{ready.length} quoted {ready.length === 1 ? "gap looks" : "gaps look"} good on paper ({ready.map((o) => o.symbol).join(", ")}), but none survives a simulated trade: the pools are too thin at that price. They are not shown, because a gap you cannot take is not a gap.</span>
               </div>
             ) : (
               <div className="text-[15px] leading-relaxed text-text">
@@ -108,12 +125,37 @@ export function ArbPanel() {
             )}
           </div>
         )}
-        <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Stocks priced in more than one pool</div>
-        {!data && <div className="grid gap-3 md:grid-cols-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-44 rounded-2xl" />)}</div>}
-        {data && pairs.length === 0 && <Panel><p className="text-sm text-muted">No stock has two pools right now, so there is nothing to compare.</p></Panel>}
+        {!data && <div className="grid gap-3 md:grid-cols-2">{Array.from({ length: 2 }).map((_, i) => <div key={i} className="skeleton h-44 rounded-2xl" />)}</div>}
+        {data && pairs.length === 0 && <Panel><p className="text-sm text-muted">No stock has two deep enough pools right now, so there is nothing to compare.</p></Panel>}
         <div className="grid gap-3 md:grid-cols-2">
-          {pairs.map((o) => <PairCard key={o.symbol} o={o} sz={sz} />)}
+          {pairs.map((o) => <PairCard key={o.symbol} o={o} sz={sz} onVerdict={onVerdict} />)}
         </div>
+        {data && rejected.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-line bg-surface/40">
+            <button onClick={() => setShowRejected((v) => !v)} className="flex w-full items-center justify-between px-4 py-3 text-left">
+              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Checked and not shown ({rejected.length})</span>
+              <span className={`font-mono text-muted transition-transform ${showRejected ? "rotate-45" : ""}`}>+</span>
+            </button>
+            <AnimatePresence initial={false}>
+              {showRejected && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  <div className="grid gap-2 border-t border-line p-4 sm:grid-cols-2">
+                    {rejected.map((o) => (
+                      <div key={o.symbol} className="flex items-center gap-3 rounded-xl border border-line bg-bg/40 px-3 py-2">
+                        <Ticker symbol={o.symbol} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between text-sm"><span className="font-medium">{o.symbol}</span><span className={`font-mono text-xs ${o.net > 0 ? "text-muted" : "text-muted-2"}`}>{o.net >= 0 ? "+" : ""}{fmtPct(o.net)} quoted</span></div>
+                          <div className="truncate font-mono text-[10px] text-muted-2">{verdicts[o.symbol]?.note ?? (!o.executable ? "one side is on a pool the contract cannot trade" : o.net <= 0 ? "gap smaller than the two pool fees" : "waiting for the simulation")}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="px-4 pb-4 font-mono text-[11px] text-muted-2">Quoted gaps come from pool spot prices. A real trade moves that price, so most of them vanish the moment you size them. Only gaps that survive the simulation get a card.</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       {watching.length > 0 && (
@@ -146,7 +188,9 @@ export function ArbPanel() {
   );
 }
 
-function PairCard({ o, sz }: { o: Opp; sz: number }) {
+type Verdict = { status: "pending" | "win" | "fail"; note?: string };
+
+function PairCard({ o, sz, onVerdict }: { o: Opp; sz: number; onVerdict: (symbol: string, v: Verdict) => void }) {
   const [open, setOpen] = useState(false);
   const { writeContractAsync } = useWriteContract();
   const stockAddr = stockBySymbol(o.symbol)?.address as Address | undefined;
@@ -202,6 +246,16 @@ function PairCard({ o, sz }: { o: Opp; sz: number }) {
   const simSize = sim.data?.best?.size ?? sz;
   const closest = sim.data?.closest ?? null;
   const takeable = candidate && simProfit !== null && simProfit > 0;
+  // tell the tab what happened, so it can count wins and fold the rest away
+  useEffect(() => {
+    if (!candidate) return;
+    if (sim.isLoading || (!sim.data && !sim.isError)) onVerdict(o.symbol, { status: "pending" });
+    else if (takeable) onVerdict(o.symbol, { status: "win" });
+    else onVerdict(o.symbol, { status: "fail", note: closest ? `${fmtUsd(closest.shortfall ?? 0)} short at ${fmtUsd(closest.size, 0)}, price impact eats the gap` : "the simulation did not go through" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidate, sim.isLoading, sim.isError, takeable, closest?.size, closest?.shortfall, o.symbol]);
+  // a card exists only for a gap that pays by simulation (or is still being simulated)
+  const visible = candidate && (takeable || sim.isLoading || (!sim.data && !sim.isError));
 
   const steps = [
     { label: "Borrow", detail: `${fmtNum(sz, 0)} USDG for one block`, venue: "Morpho" },
@@ -211,6 +265,7 @@ function PairCard({ o, sz }: { o: Opp; sz: number }) {
     { label: "Keep", detail: `${profit >= 0 ? "+" : ""}${fmtUsd(profit)} before price impact`, venue: "you" },
   ];
 
+  if (!visible) return null;
   return (
     <div className={`card flex flex-col p-5 ${takeable ? "shadow-[0_0_0_1px_rgba(var(--up-rgb),0.35)]" : ""}`}>
       <div className="flex items-center gap-3">
